@@ -10,11 +10,11 @@ const createDb = async () => {
 		});
 		return drizzle({ client, schema });
 	}
-	const { default: Database } = await import("better-sqlite3");
-	const { drizzle } = await import("drizzle-orm/better-sqlite3");
+	const { Database } = await import("bun:sqlite");
+	const { drizzle } = await import("drizzle-orm/bun-sqlite");
 	const sqlite = new Database("sqlite.db");
-	sqlite.pragma("journal_mode = WAL");
-	sqlite.pragma("foreign_keys = ON");
+	sqlite.run("PRAGMA journal_mode = WAL;");
+	sqlite.run("PRAGMA foreign_keys = ON;");
 	return drizzle({ client: sqlite, schema });
 };
 
