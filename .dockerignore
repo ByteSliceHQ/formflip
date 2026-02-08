@@ -1,0 +1,17 @@
+node_modules
+.output
+.nitro
+.tanstack
+.vinxi
+.git
+.github
+.vscode
+.cursor
+.agents
+.claude
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+.DS_Store
