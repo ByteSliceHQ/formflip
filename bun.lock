@@ -5,7 +5,6 @@
     "": {
       "name": "formflip",
       "dependencies": {
-        "@libsql/client": "^0.17.0",
         "@swirls/sdk": "^0.0.11",
         "@tailwindcss/vite": "^4.0.6",
         "@tanstack/react-devtools": "^0.7.0",

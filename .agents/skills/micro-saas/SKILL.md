@@ -23,7 +23,7 @@ Build a complete micro-SaaS application powered by Swirls. This skill generates 
 - **Framework**: [TanStack Start](https://tanstack.com/start) (full-stack React with SSR)
 - **Routing**: [TanStack Router](https://tanstack.com/router) (file-based, type-safe)
 - **Auth**: [Better Auth](https://www.better-auth.com/) (email/password, OAuth, sessions)
-- **Database**: SQLite via [Drizzle ORM](https://orm.drizzle.team/) (local `bun:sqlite` or remote Turso/libSQL)
+- **Database**: SQLite via [Drizzle ORM](https://orm.drizzle.team/) (local `bun:sqlite`)
 - **Validation**: [Zod](https://zod.dev/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) v4
 - **AI Workflows**: [Swirls SDK](https://swirls.ai) (forms, graph execution, data streams)
@@ -132,7 +132,6 @@ my-saas/
     "swirls:gen": "swirls dev gen"
   },
   "dependencies": {
-    "@libsql/client": "^0.17.0",
     "@swirls/sdk": "^0.0.4",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
@@ -239,10 +238,6 @@ export default defineConfig({
 # Better Auth
 BETTER_AUTH_SECRET=your-secret-key-here
 BETTER_AUTH_URL=http://localhost:3000
-
-# Optional: Remote SQLite (Turso/libSQL) - omit to use local sqlite.db
-# DB_URL=libsql://your-db.turso.io
-# DB_TOKEN=your-auth-token
 
 # Swirls
 SWIRLS_API_KEY=ak_your-swirls-api-key
@@ -368,17 +363,6 @@ registerForms();
 import * as schema from "./schema";
 
 const createDb = async () => {
-  // Remote libSQL/Turso (if configured)
-  if (process.env.DB_URL && process.env.DB_TOKEN) {
-    const { createClient } = await import("@libsql/client/web");
-    const { drizzle } = await import("drizzle-orm/libsql");
-    const client = createClient({
-      url: process.env.DB_URL,
-      authToken: process.env.DB_TOKEN,
-    });
-    return drizzle({ client, schema });
-  }
-
   // Local SQLite with Bun
   const { Database } = await import("bun:sqlite");
   const { drizzle } = await import("drizzle-orm/bun-sqlite");
@@ -1106,8 +1090,6 @@ COPY --from=build /app/.output ./.output
 
 ENV BETTER_AUTH_SECRET=""
 ENV BETTER_AUTH_URL=""
-ENV DB_URL=""
-ENV DB_TOKEN=""
 ENV SWIRLS_API_KEY=""
 
 EXPOSE 3000
@@ -1532,7 +1514,6 @@ This keeps your TypeScript types in sync with your Swirls project.
 - `BETTER_AUTH_SECRET` - Generate with `openssl rand -base64 32`
 - `SWIRLS_API_KEY` - Create in Swirls dashboard (format: `ak_*`)
 - Never commit `.env` files
-- Use Turso for production databases (`DB_URL` + `DB_TOKEN`)
 
 ### 10. Local Development Workflow
 
