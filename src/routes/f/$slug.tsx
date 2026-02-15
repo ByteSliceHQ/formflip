@@ -1,6 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { CheckCircle, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { getPublicForm, submitForm } from "@/server/forms";
 import type { FormField } from "@/db/schema";
 
@@ -43,16 +55,18 @@ function PublicFormPage() {
 					<p className="mt-2 text-gray-400">
 						Thank you for filling out {form.name}.
 					</p>
-					<button
+					<Button
 						type="button"
+						variant="outline"
+						size="sm"
+						className="mt-6"
 						onClick={() => {
 							setValues({});
 							setSubmitted(false);
 						}}
-						className="mt-6 rounded-lg border border-slate-600 px-6 py-2 text-sm text-gray-300 transition-colors hover:border-slate-500 hover:text-white"
 					>
 						Submit another response
-					</button>
+					</Button>
 				</div>
 			</div>
 		);
@@ -115,10 +129,10 @@ function PublicFormPage() {
 					)}
 
 					{form.fields.length > 0 && (
-						<button
+						<Button
 							type="submit"
 							disabled={loading}
-							className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-500 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-600 disabled:opacity-50"
+							className="mt-6 w-full gap-2"
 						>
 							{loading ? (
 								"Submitting..."
@@ -128,7 +142,7 @@ function PublicFormPage() {
 									Submit
 								</>
 							)}
-						</button>
+						</Button>
 					)}
 				</form>
 
@@ -149,69 +163,67 @@ function FieldInput({
 	value: string;
 	onChange: (val: string) => void;
 }) {
-	const baseClass =
-		"w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none";
+	const fieldId = `field-${field.id}`;
 
 	return (
-		<div>
-			<label
-				htmlFor={`field-${field.id}`}
-				className="mb-1.5 block text-sm font-medium text-gray-300"
-			>
+		<div className="space-y-2">
+			<Label htmlFor={fieldId} className="text-gray-300">
 				{field.label}
 				{field.required && <span className="ml-1 text-red-400">*</span>}
-			</label>
+			</Label>
 
 			{field.type === "textarea" ? (
-				<textarea
-					id={`field-${field.id}`}
+				<Textarea
+					id={fieldId}
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					required={field.required}
 					rows={4}
-					className={baseClass}
 					placeholder={field.placeholder ?? undefined}
 				/>
 			) : field.type === "checkbox" ? (
-				<label className="flex items-center gap-2 text-sm text-gray-300">
-					<input
-						type="checkbox"
+				<div className="flex items-center gap-2">
+					<Checkbox
+						id={fieldId}
 						checked={value === "true"}
-						onChange={(e) => onChange(e.target.checked ? "true" : "false")}
-						className="rounded border-slate-600 bg-slate-700"
-					/>
-					{field.placeholder ?? "Yes"}
-				</label>
-			) : field.type === "select" ? (
-				<select
-					id={`field-${field.id}`}
-					value={value}
-					onChange={(e) => onChange(e.target.value)}
-					required={field.required}
-					className={baseClass}
-				>
-					<option value="">Select an option</option>
-					{(() => {
-						try {
-							const opts = JSON.parse(field.options ?? "[]") as string[];
-							return opts.map((opt) => (
-								<option key={opt} value={opt}>
-									{opt}
-								</option>
-							));
-						} catch {
-							return null;
+						onCheckedChange={(checked) =>
+							onChange(checked === true ? "true" : "false")
 						}
-					})()}
-				</select>
+					/>
+					<Label
+						htmlFor={fieldId}
+						className="cursor-pointer text-sm font-normal text-gray-300"
+					>
+						{field.placeholder ?? "Yes"}
+					</Label>
+				</div>
+			) : field.type === "select" ? (
+				<Select value={value || undefined} onValueChange={onChange}>
+					<SelectTrigger id={fieldId} className="w-full">
+						<SelectValue placeholder="Select an option" />
+					</SelectTrigger>
+					<SelectContent>
+						{(() => {
+							try {
+								const opts = JSON.parse(field.options ?? "[]") as string[];
+								return opts.map((opt) => (
+									<SelectItem key={opt} value={opt}>
+										{opt}
+									</SelectItem>
+								));
+							} catch {
+								return null;
+							}
+						})()}
+					</SelectContent>
+				</Select>
 			) : (
-				<input
-					id={`field-${field.id}`}
+				<Input
+					id={fieldId}
 					type={field.type}
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					required={field.required}
-					className={baseClass}
 					placeholder={field.placeholder ?? undefined}
 				/>
 			)}

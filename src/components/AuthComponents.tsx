@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { LogOut, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
 export function SignedIn({ children }: { children: React.ReactNode }) {
@@ -19,12 +20,9 @@ export function SignInButton({ children }: { children?: React.ReactNode }) {
 	return (
 		<Link to="/sign-in">
 			{children ?? (
-				<button
-					type="button"
-					className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-600"
-				>
+				<Button type="button" size="sm">
 					Sign In
-				</button>
+				</Button>
 			)}
 		</Link>
 	);
@@ -43,14 +41,15 @@ export function UserButton() {
 
 	return (
 		<div className="group relative">
-			<button
+			<Button
 				type="button"
-				className="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500 text-sm font-medium text-white"
+				size="icon"
+				className="h-8 w-8 rounded-full"
 			>
 				{session.user.name?.[0]?.toUpperCase() ?? (
 					<User size={16} />
 				)}
-			</button>
+			</Button>
 			<div className="invisible absolute right-0 top-full z-50 mt-2 min-w-48 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl group-hover:visible">
 				<div className="border-b border-slate-700 px-4 py-2">
 					<p className="text-sm font-medium text-white">
@@ -58,14 +57,15 @@ export function UserButton() {
 					</p>
 					<p className="text-xs text-gray-400">{session.user.email}</p>
 				</div>
-				<button
+				<Button
 					type="button"
+					variant="ghost"
 					onClick={handleSignOut}
-					className="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-slate-700 hover:text-white"
+					className="flex w-full items-center justify-start gap-2 px-4 py-2 text-sm"
 				>
 					<LogOut size={14} />
 					Sign Out
-				</button>
+				</Button>
 			</div>
 		</div>
 	);

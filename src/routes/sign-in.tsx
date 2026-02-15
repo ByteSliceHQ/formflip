@@ -1,6 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
 export const Route = createFileRoute("/sign-in")({
@@ -53,48 +56,36 @@ function SignInPage() {
 						</div>
 					)}
 					<div className="space-y-4">
-						<div>
-							<label
-								htmlFor="email"
-								className="mb-1 block text-sm font-medium text-gray-300"
-							>
+						<div className="space-y-2">
+							<Label htmlFor="email" className="text-gray-300">
 								Email
-							</label>
-							<input
+							</Label>
+							<Input
 								id="email"
 								type="email"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								required
-								className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
 								placeholder="you@example.com"
 							/>
 						</div>
-						<div>
-							<label
-								htmlFor="password"
-								className="mb-1 block text-sm font-medium text-gray-300"
-							>
+						<div className="space-y-2">
+							<Label htmlFor="password" className="text-gray-300">
 								Password
-							</label>
-							<input
+							</Label>
+							<Input
 								id="password"
 								type="password"
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								required
-								className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
 								placeholder="Your password"
 							/>
 						</div>
 					</div>
-					<button
-						type="submit"
-						disabled={loading}
-						className="mt-6 w-full rounded-lg bg-cyan-500 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-600 disabled:opacity-50"
-					>
+					<Button type="submit" disabled={loading} className="mt-6 w-full">
 						{loading ? "Signing in..." : "Sign In"}
-					</button>
+					</Button>
 				</form>
 
 				<p className="mt-6 text-center text-sm text-gray-400">

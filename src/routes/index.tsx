@@ -8,6 +8,7 @@ import {
 	Settings,
 	Zap,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, SignInButton } from "@/components/AuthComponents";
 
 export const Route = createFileRoute("/")({ component: LandingPage });
@@ -71,30 +72,23 @@ function LandingPage() {
 					<div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
 						<SignedOut>
 							<SignInButton>
-								<button
-									type="button"
-									className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-8 py-3 text-lg font-semibold text-white shadow-lg shadow-cyan-500/30 transition-colors hover:bg-cyan-600"
-								>
+								<Button size="lg" className="gap-2 shadow-lg shadow-cyan-500/30">
 									Get Started Free
 									<ArrowRight size={20} />
-								</button>
+								</Button>
 							</SignInButton>
 						</SignedOut>
 						<SignedIn>
-							<Link
-								to="/dashboard"
-								className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-8 py-3 text-lg font-semibold text-white shadow-lg shadow-cyan-500/30 transition-colors hover:bg-cyan-600"
-							>
-								Go to Dashboard
-								<ArrowRight size={20} />
-							</Link>
+							<Button asChild size="lg" className="gap-2 shadow-lg shadow-cyan-500/30">
+								<Link to="/dashboard">
+									Go to Dashboard
+									<ArrowRight size={20} />
+								</Link>
+							</Button>
 						</SignedIn>
-						<Link
-							to="/pricing"
-							className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-8 py-3 text-lg font-semibold text-gray-300 transition-colors hover:border-slate-500 hover:text-white"
-						>
-							View Pricing
-						</Link>
+						<Button asChild variant="outline" size="lg" className="gap-2">
+							<Link to="/pricing">View Pricing</Link>
+						</Button>
 					</div>
 				</div>
 			</section>
@@ -139,23 +133,19 @@ function LandingPage() {
 					</p>
 					<SignedOut>
 						<SignInButton>
-							<button
-								type="button"
-								className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-8 py-3 text-lg font-semibold text-white shadow-lg shadow-cyan-500/30 transition-colors hover:bg-cyan-600"
-							>
+							<Button size="lg" className="gap-2 shadow-lg shadow-cyan-500/30">
 								Get Started Free
 								<ArrowRight size={20} />
-							</button>
+							</Button>
 						</SignInButton>
 					</SignedOut>
 					<SignedIn>
-						<Link
-							to="/dashboard"
-							className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-8 py-3 text-lg font-semibold text-white shadow-lg shadow-cyan-500/30 transition-colors hover:bg-cyan-600"
-						>
-							Go to Dashboard
-							<ArrowRight size={20} />
-						</Link>
+						<Button asChild size="lg" className="gap-2 shadow-lg shadow-cyan-500/30">
+							<Link to="/dashboard">
+								Go to Dashboard
+								<ArrowRight size={20} />
+							</Link>
+						</Button>
 					</SignedIn>
 				</div>
 			</section>

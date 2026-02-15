@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Eye, EyeOff, FileText, Inbox, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { Form, FormField } from "@/db/schema";
 import {
 	createForm,
@@ -40,14 +42,15 @@ function DashboardPage() {
 							Create, manage, and collect responses.
 						</p>
 					</div>
-					<button
+					<Button
 						type="button"
+						size="sm"
 						onClick={() => setShowCreateForm(true)}
-						className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-600"
+						className="gap-2"
 					>
 						<Plus size={18} />
 						New Form
-					</button>
+					</Button>
 				</div>
 
 				{/* Stats bar */}
@@ -170,22 +173,25 @@ function FormCard({
 				</div>
 
 				<div className="flex items-center gap-1">
-					<button
+					<Button
 						type="button"
+						variant="ghost"
+						size="icon"
 						onClick={handleToggle}
-						className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-slate-700 hover:text-white"
 						title={form.published ? "Unpublish" : "Publish"}
 					>
 						{form.published ? <Eye size={16} /> : <EyeOff size={16} />}
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
+						variant="ghost"
+						size="icon"
 						onClick={handleDelete}
-						className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+						className="text-gray-400 hover:bg-red-500/10 hover:text-red-400"
 						title="Delete"
 					>
 						<Trash2 size={16} />
-					</button>
+					</Button>
 				</div>
 			</div>
 		</Link>
@@ -221,36 +227,30 @@ function CreateFormCard({
 		>
 			<h3 className="mb-4 text-lg font-semibold text-white">Create New Form</h3>
 			<div className="space-y-3">
-				<input
+				<Input
 					type="text"
 					placeholder="Form name"
 					value={name}
 					onChange={(e) => setName(e.target.value)}
-					className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
 				/>
-				<input
+				<Input
 					type="text"
 					placeholder="Description (optional)"
 					value={description}
 					onChange={(e) => setDescription(e.target.value)}
-					className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
 				/>
 			</div>
 			<div className="mt-4 flex justify-end gap-2">
-				<button
-					type="button"
-					onClick={onCancel}
-					className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-gray-300 transition-colors hover:border-slate-500 hover:text-white"
-				>
+				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
 					Cancel
-				</button>
-				<button
+				</Button>
+				<Button
 					type="submit"
+					size="sm"
 					disabled={loading || !name.trim()}
-					className="rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-600 disabled:opacity-50"
 				>
 					{loading ? "Creating..." : "Create"}
-				</button>
+				</Button>
 			</div>
 		</form>
 	);

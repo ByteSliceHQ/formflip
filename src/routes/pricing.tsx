@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { SignedIn, SignedOut, SignInButton } from "@/components/AuthComponents";
 
 export const Route = createFileRoute("/pricing")({ component: PricingPage });
@@ -94,29 +95,23 @@ function PricingPage() {
 							{/* Pricing action - empty for now */}
 							<SignedOut>
 								<SignInButton>
-									<button
+									<Button
 										type="button"
-										className={`w-full rounded-lg py-3 text-center font-semibold transition-colors ${
-											plan.highlighted
-												? "bg-cyan-500 text-white hover:bg-cyan-600"
-												: "border border-slate-600 text-gray-300 hover:border-slate-500 hover:text-white"
-										}`}
+										variant={plan.highlighted ? "default" : "outline"}
+										className="w-full"
 									>
 										{plan.cta}
-									</button>
+									</Button>
 								</SignInButton>
 							</SignedOut>
 							<SignedIn>
-								<Link
-									to="/dashboard"
-									className={`block w-full rounded-lg py-3 text-center font-semibold transition-colors ${
-										plan.highlighted
-											? "bg-cyan-500 text-white hover:bg-cyan-600"
-											: "border border-slate-600 text-gray-300 hover:border-slate-500 hover:text-white"
-									}`}
+								<Button
+									asChild
+									variant={plan.highlighted ? "default" : "outline"}
+									className="w-full"
 								>
-									{plan.cta}
-								</Link>
+									<Link to="/dashboard">{plan.cta}</Link>
+								</Button>
 							</SignedIn>
 						</div>
 					))}

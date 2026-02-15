@@ -4,7 +4,7 @@ import {
 	redirect,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
 	ArrowLeft,
 	ChevronDown,
@@ -18,6 +18,17 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import {
 	createFormField,
 	deleteForm,
@@ -133,34 +144,39 @@ function FormDetailPage() {
 						</div>
 						{!editing && (
 							<div className="flex items-center gap-2">
-								<button
+								<Button
 									type="button"
+									variant="ghost"
+									size="icon"
 									onClick={() => setEditing(true)}
-									className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-slate-700 hover:text-white"
 								>
 									<Pencil size={16} />
-								</button>
-								<button
+								</Button>
+								<Button
 									type="button"
+									variant="ghost"
+									size="icon"
 									onClick={handleDelete}
-									className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-400"
+									className="hover:bg-red-500/10 hover:text-red-400"
 								>
 									<Trash2 size={16} />
-								</button>
+								</Button>
 							</div>
 						)}
 					</div>
 
 					{/* Publish controls */}
 					<div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-700 pt-4">
-						<button
+						<Button
 							type="button"
+							variant={form.published ? "secondary" : "secondary"}
+							size="sm"
 							onClick={handleTogglePublish}
-							className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+							className={
 								form.published
-									? "bg-green-500/20 text-green-300 hover:bg-green-500/30"
-									: "bg-slate-700 text-gray-300 hover:bg-slate-600"
-							}`}
+									? "gap-2 bg-green-500/20 text-green-300 hover:bg-green-500/30"
+									: "gap-2"
+							}
 						>
 							{form.published ? (
 								<>
@@ -171,21 +187,23 @@ function FormDetailPage() {
 									<EyeOff size={16} /> Draft
 								</>
 							)}
-						</button>
+						</Button>
 
 						{form.published && (
 							<>
 								<code className="rounded bg-slate-700 px-3 py-1.5 text-xs text-gray-300">
 									{shareUrl}
 								</code>
-								<button
+								<Button
 									type="button"
+									variant="secondary"
+									size="sm"
 									onClick={handleCopyLink}
-									className="inline-flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs text-gray-300 transition-colors hover:bg-slate-600 hover:text-white"
+									className="gap-1.5"
 								>
 									<ClipboardCopy size={14} />
 									{copied ? "Copied!" : "Copy link"}
-								</button>
+								</Button>
 							</>
 						)}
 
@@ -198,28 +216,24 @@ function FormDetailPage() {
 
 				{/* Tab bar */}
 				<div className="mb-6 flex gap-1 rounded-lg bg-slate-800/50 p-1">
-					<button
+					<Button
 						type="button"
+						variant={tab === "fields" ? "secondary" : "ghost"}
+						size="sm"
 						onClick={() => setTab("fields")}
-						className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-							tab === "fields"
-								? "bg-slate-700 text-white"
-								: "text-gray-400 hover:text-white"
-						}`}
+						className="flex-1"
 					>
 						Fields ({form.fields.length})
-					</button>
-					<button
+					</Button>
+					<Button
 						type="button"
+						variant={tab === "submissions" ? "secondary" : "ghost"}
+						size="sm"
 						onClick={() => setTab("submissions")}
-						className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-							tab === "submissions"
-								? "bg-slate-700 text-white"
-								: "text-gray-400 hover:text-white"
-						}`}
+						className="flex-1"
 					>
 						Submissions ({submissions.length})
-					</button>
+					</Button>
 				</div>
 
 				{/* Tab content */}
@@ -265,35 +279,29 @@ function EditFormInline({
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-3">
-			<input
+			<Input
 				type="text"
 				value={name}
 				onChange={(e) => setName(e.target.value)}
-				className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white focus:border-cyan-500 focus:outline-none"
 				autoFocus
 			/>
-			<input
+			<Input
 				type="text"
 				value={description}
 				onChange={(e) => setDescription(e.target.value)}
 				placeholder="Description (optional)"
-				className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
 			/>
 			<div className="flex gap-2">
-				<button
+				<Button
 					type="submit"
+					size="sm"
 					disabled={loading || !name.trim()}
-					className="rounded-lg bg-cyan-500 px-4 py-1.5 text-sm font-medium text-white hover:bg-cyan-600 disabled:opacity-50"
 				>
 					{loading ? "Saving..." : "Save"}
-				</button>
-				<button
-					type="button"
-					onClick={onCancel}
-					className="rounded-lg border border-slate-600 px-4 py-1.5 text-sm text-gray-300 hover:text-white"
-				>
+				</Button>
+				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
 					Cancel
-				</button>
+				</Button>
 			</div>
 		</form>
 	);
@@ -311,14 +319,15 @@ function FieldsTab({
 		<div className="space-y-3">
 			<div className="flex items-center justify-between">
 				<h2 className="text-lg font-semibold text-white">Form Fields</h2>
-				<button
+				<Button
 					type="button"
+					size="sm"
 					onClick={() => setShowAddField(true)}
-					className="inline-flex items-center gap-2 rounded-lg bg-cyan-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-600"
+					className="gap-2"
 				>
 					<Plus size={16} />
 					Add Field
-				</button>
+				</Button>
 			</div>
 
 			{form.fields.length === 0 && !showAddField && (
@@ -378,53 +387,60 @@ function FieldRow({
 	if (editing) {
 		return (
 			<div className="flex flex-wrap items-center gap-2 rounded-lg border border-cyan-500/30 bg-slate-800/50 p-3">
-				<input
+				<Input
 					type="text"
 					value={label}
 					onChange={(e) => setLabel(e.target.value)}
-					className="flex-1 rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
+					className="flex-1"
 					autoFocus
 				/>
-				<select
-					value={type}
-					onChange={(e) => setType(e.target.value)}
-					className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
-				>
-					{FIELD_TYPES.map((t) => (
-						<option key={t} value={t}>
-							{t}
-						</option>
-					))}
-				</select>
-				<label className="flex items-center gap-1.5 text-sm text-gray-300">
-					<input
-						type="checkbox"
+				<Select value={type} onValueChange={(v) => setType(v)}>
+					<SelectTrigger className="w-[120px]">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{FIELD_TYPES.map((t) => (
+							<SelectItem key={t} value={t}>
+								{t}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+				<div className="flex items-center gap-1.5">
+					<Checkbox
+						id={`field-required-${field.id}`}
 						checked={required}
-						onChange={(e) => setRequired(e.target.checked)}
-						className="rounded border-slate-600"
+						onCheckedChange={(c) => setRequired(c === true)}
 					/>
-					Required
-				</label>
-				<button
+					<Label
+						htmlFor={`field-required-${field.id}`}
+						className="cursor-pointer text-sm font-normal text-gray-300"
+					>
+						Required
+					</Label>
+				</div>
+				<Button
 					type="button"
+					size="sm"
 					onClick={handleSave}
 					disabled={loading || !label.trim()}
-					className="rounded bg-cyan-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-600 disabled:opacity-50"
+					className="text-xs"
 				>
 					{loading ? "..." : "Save"}
-				</button>
-				<button
+				</Button>
+				<Button
 					type="button"
+					variant="ghost"
+					size="icon"
 					onClick={() => {
 						setLabel(field.label);
 						setType(field.type);
 						setRequired(field.required);
 						setEditing(false);
 					}}
-					className="rounded p-1.5 text-gray-400 hover:text-white"
 				>
 					<X size={14} />
-				</button>
+				</Button>
 			</div>
 		);
 	}
@@ -441,23 +457,26 @@ function FieldRow({
 					required
 				</span>
 			)}
-			<button
+			<Button
 				type="button"
+				variant="ghost"
+				size="icon"
 				onClick={() => setEditing(true)}
-				className="rounded p-1 text-gray-400 transition-colors hover:text-white"
 			>
 				<Pencil size={14} />
-			</button>
-			<button
+			</Button>
+			<Button
 				type="button"
+				variant="ghost"
+				size="icon"
 				onClick={async () => {
 					await deleteFormField({ data: { fieldId: field.id } });
 					onChanged();
 				}}
-				className="rounded p-1 text-gray-400 transition-colors hover:text-red-400"
+				className="hover:text-red-400"
 			>
 				<Trash2 size={14} />
-			</button>
+			</Button>
 		</div>
 	);
 }
@@ -473,6 +492,7 @@ function AddFieldForm({
 	onAdded: () => void;
 	onCancel: () => void;
 }) {
+	const requiredId = useId();
 	const [label, setLabel] = useState("");
 	const [type, setType] = useState<string>("text");
 	const [required, setRequired] = useState(false);
@@ -500,48 +520,50 @@ function AddFieldForm({
 			onSubmit={handleSubmit}
 			className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-slate-600 p-3"
 		>
-			<input
+			<Input
 				type="text"
 				placeholder="Field label"
 				value={label}
 				onChange={(e) => setLabel(e.target.value)}
-				className="flex-1 rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
+				className="flex-1"
 				autoFocus
 			/>
-			<select
-				value={type}
-				onChange={(e) => setType(e.target.value)}
-				className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-white focus:border-cyan-500 focus:outline-none"
-			>
-				{FIELD_TYPES.map((t) => (
-					<option key={t} value={t}>
-						{t}
-					</option>
-				))}
-			</select>
-			<label className="flex items-center gap-1.5 text-sm text-gray-300">
-				<input
-					type="checkbox"
+			<Select value={type} onValueChange={(v) => setType(v)}>
+				<SelectTrigger className="w-[120px]">
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					{FIELD_TYPES.map((t) => (
+						<SelectItem key={t} value={t}>
+							{t}
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
+			<div className="flex items-center gap-1.5">
+				<Checkbox
+					id={requiredId}
 					checked={required}
-					onChange={(e) => setRequired(e.target.checked)}
-					className="rounded border-slate-600"
+					onCheckedChange={(c) => setRequired(c === true)}
 				/>
-				Required
-			</label>
-			<button
+				<Label
+					htmlFor={requiredId}
+					className="cursor-pointer text-sm font-normal text-gray-300"
+				>
+					Required
+				</Label>
+			</div>
+			<Button
 				type="submit"
+				size="sm"
 				disabled={loading || !label.trim()}
-				className="rounded bg-cyan-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-cyan-600 disabled:opacity-50"
+				className="text-xs"
 			>
 				{loading ? "Adding..." : "Add"}
-			</button>
-			<button
-				type="button"
-				onClick={onCancel}
-				className="rounded p-1.5 text-gray-400 hover:text-white"
-			>
+			</Button>
+			<Button type="button" variant="ghost" size="icon" onClick={onCancel}>
 				<X size={14} />
-			</button>
+			</Button>
 		</form>
 	);
 }
@@ -598,12 +620,13 @@ function SubmissionsTab({
 					className="rounded-lg border border-slate-700 bg-slate-800/50"
 				>
 					<div className="flex items-center justify-between px-4 py-3">
-						<button
+						<Button
 							type="button"
+							variant="ghost"
 							onClick={() =>
 								setExpandedId(expandedId === sub.id ? null : sub.id)
 							}
-							className="flex flex-1 items-center gap-2 text-left"
+							className="flex flex-1 items-center justify-start gap-2"
 						>
 							{expandedId === sub.id ? (
 								<ChevronUp size={16} className="text-gray-400" />
@@ -616,19 +639,21 @@ function SubmissionsTab({
 							<span className="text-xs text-gray-500">
 								{new Date(sub.submittedAt).toLocaleString()}
 							</span>
-						</button>
-						<button
+						</Button>
+						<Button
 							type="button"
+							variant="ghost"
+							size="icon"
 							onClick={async () => {
 								await deleteSubmission({
 									data: { submissionId: sub.id },
 								});
 								onDeleted();
 							}}
-							className="rounded p-1 text-gray-400 transition-colors hover:text-red-400"
+							className="hover:text-red-400"
 						>
 							<Trash2 size={14} />
-						</button>
+						</Button>
 					</div>
 
 					{expandedId === sub.id && (
