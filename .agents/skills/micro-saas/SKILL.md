@@ -516,7 +516,7 @@ import { createAuthClient } from "better-auth/react";
 export const authClient = createAuthClient();
 ```
 
-### src/components/AuthComponents.tsx
+### src/components/auth.tsx
 
 ```typescript
 import { authClient } from "@/lib/auth-client";

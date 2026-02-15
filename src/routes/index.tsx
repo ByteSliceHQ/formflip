@@ -9,7 +9,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { SignedIn, SignedOut, SignInButton } from "@/components/AuthComponents";
+import { SignedIn, SignedOut, SignInButton } from "@/components/auth";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({ component: LandingPage });

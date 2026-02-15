@@ -5,7 +5,7 @@ import {
 	SignedOut,
 	SignInButton,
 	UserButton,
-} from "./AuthComponents";
+} from "@/components/auth";
 
 export default function Header() {
 	return (

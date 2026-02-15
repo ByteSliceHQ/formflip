@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
+import { SignedIn, SignedOut, SignInButton } from "@/components/auth";
 import { Button } from "@/components/ui/button";
-import { SignedIn, SignedOut, SignInButton } from "@/components/AuthComponents";
 
 export const Route = createFileRoute("/pricing")({ component: PricingPage });
 
@@ -86,7 +86,9 @@ function PricingPage() {
 										<Check
 											size={18}
 											className={
-												plan.highlighted ? "text-primary" : "text-muted-foreground"
+												plan.highlighted
+													? "text-primary"
+													: "text-muted-foreground"
 											}
 										/>
 										{feature}
