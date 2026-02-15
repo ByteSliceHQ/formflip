@@ -23,7 +23,7 @@ function DashboardPage() {
 
 	const refreshForms = async () => {
 		const data = await getForms();
-		setForms(data as FormDisplay[]);
+		setForms(data);
 	};
 
 	const totalSubmissions = forms.reduce((sum, f) => sum + f.submissionCount, 0);
