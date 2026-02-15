@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.0",
-    "@swirls/sdk": "^0.0.7",
+    "@swirls/sdk": "^0.0.9",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
     "@tanstack/react-router": "^1.132.0",

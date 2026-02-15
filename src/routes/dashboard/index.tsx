@@ -3,7 +3,7 @@ import { Eye, EyeOff, FileText, Inbox, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { Form, FormField } from "@/db/schema";
+import type { FormDisplay } from "@/server/forms";
 import {
 	createForm,
 	deleteForm,
@@ -16,16 +16,14 @@ export const Route = createFileRoute("/dashboard/")({
 	component: DashboardPage,
 });
 
-type FormWithMeta = Form & { fields: FormField[]; submissionCount: number };
-
 function DashboardPage() {
-	const initialForms = Route.useLoaderData() as FormWithMeta[];
+	const initialForms = Route.useLoaderData();
 	const [forms, setForms] = useState(initialForms);
 	const [showCreateForm, setShowCreateForm] = useState(false);
 
 	const refreshForms = async () => {
 		const data = await getForms();
-		setForms(data as FormWithMeta[]);
+		setForms(data as FormDisplay[]);
 	};
 
 	const totalSubmissions = forms.reduce((sum, f) => sum + f.submissionCount, 0);
@@ -60,7 +58,9 @@ function DashboardPage() {
 					<div className="mb-6 grid grid-cols-3 gap-4">
 						<div className="rounded-lg border border-border bg-card px-4 py-3 shadow-warm">
 							<p className="text-xs text-muted-foreground">Total Forms</p>
-							<p className="text-2xl font-bold text-foreground">{forms.length}</p>
+							<p className="text-2xl font-bold text-foreground">
+								{forms.length}
+							</p>
 						</div>
 						<div className="rounded-lg border border-border bg-card px-4 py-3 shadow-warm">
 							<p className="text-xs text-muted-foreground">Published</p>
@@ -120,7 +120,7 @@ function FormCard({
 	onDeleted,
 	onToggled,
 }: {
-	form: FormWithMeta;
+	form: FormDisplay;
 	onDeleted: () => void;
 	onToggled: () => void;
 }) {
@@ -227,7 +227,9 @@ function CreateFormCard({
 			onSubmit={handleSubmit}
 			className="mb-6 rounded-xl border border-primary/30 bg-card p-5 shadow-warm"
 		>
-			<h3 className="mb-4 text-lg font-semibold text-foreground">Create New Form</h3>
+			<h3 className="mb-4 text-lg font-semibold text-foreground">
+				Create New Form
+			</h3>
 			<div className="space-y-3">
 				<Input
 					type="text"
@@ -246,11 +248,7 @@ function CreateFormCard({
 				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
 					Cancel
 				</Button>
-				<Button
-					type="submit"
-					size="sm"
-					disabled={loading || !name.trim()}
-				>
+				<Button type="submit" size="sm" disabled={loading || !name.trim()}>
 					{loading ? "Creating..." : "Create"}
 				</Button>
 			</div>

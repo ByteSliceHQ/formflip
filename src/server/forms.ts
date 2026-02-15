@@ -1,16 +1,44 @@
 import { createServerFn } from "@tanstack/react-start";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
-import {
-	formFields,
-	formSubmissions,
-	formSubmissionValues,
-	forms,
-} from "@/db/schema";
+import { formMappings } from "@/db/schema";
 import { authMiddleware } from "@/lib/auth-guard";
+import {
+	type FormFieldDisplay,
+	type FormFieldInput,
+	formFieldsToJsonSchema,
+	jsonSchemaToFormFields,
+} from "@/lib/swirls-schema";
 
-// ─── Slug Helpers ──────────────────────────────────────────────────
+export type { FormFieldDisplay };
+
+import { env } from "@/env";
+import { swirls } from "@/lib/swirls";
+
+// ─── Types (UI-compatible) ───────────────────────────────────────────
+
+export type FormDisplay = {
+	id: number;
+	swirlsFormId: string;
+	userId: string;
+	name: string;
+	description: string | null;
+	slug: string;
+	published: boolean;
+	createdAt: Date;
+	updatedAt?: Date;
+	fields: FormFieldDisplay[];
+	submissionCount?: number;
+};
+
+export type FormSubmissionDisplay = {
+	id: string;
+	submittedAt: Date;
+	values: Array<{ field: FormFieldDisplay; value: string }>;
+};
+
+// ─── Slug Helpers ────────────────────────────────────────────────────
 
 function generateSlug(name: string): string {
 	const base = name
@@ -21,52 +49,89 @@ function generateSlug(name: string): string {
 	return `${base}-${suffix}`;
 }
 
-// ─── Form CRUD ─────────────────────────────────────────────────────
+// ─── Form CRUD ───────────────────────────────────────────────────────
 
 export const getForms = createServerFn({ method: "GET" })
 	.middleware([authMiddleware])
 	.handler(async ({ context }) => {
-		const userForms = await db.query.forms.findMany({
-			where: eq(forms.userId, context.userId),
-			with: { fields: { orderBy: [asc(formFields.order)] } },
-			orderBy: [desc(forms.createdAt)],
+		const mappings = await db.query.formMappings.findMany({
+			where: eq(formMappings.userId, context.userId),
+			orderBy: [desc(formMappings.createdAt)],
 		});
 
-		if (userForms.length === 0) return [];
+		if (mappings.length === 0) return [];
 
-		// Attach submission counts
-		const formIds = userForms.map((f) => f.id);
-		const counts = await db
-			.select({
-				formId: formSubmissions.formId,
-				count: sql<number>`count(*)`.as("count"),
-			})
-			.from(formSubmissions)
-			.where(
-				sql`${formSubmissions.formId} IN (${sql.join(
-					formIds.map((id) => sql`${id}`),
-					sql`, `,
-				)})`,
-			)
-			.groupBy(formSubmissions.formId);
+		const result: FormDisplay[] = [];
 
-		const countMap = new Map(counts.map((c) => [c.formId, c.count]));
+		for (const m of mappings) {
+			try {
+				const swirlsForm = await swirls.client.forms.getForm({
+					id: m.swirlsFormId,
+				});
+				const { results: submissions } =
+					await swirls.client.forms.listFormSubmissions({
+						formId: m.swirlsFormId,
+					});
+				const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
 
-		return userForms.map((f) => ({
-			...f,
-			submissionCount: countMap.get(f.id) ?? 0,
-		}));
+				result.push({
+					id: m.id,
+					swirlsFormId: m.swirlsFormId,
+					userId: m.userId,
+					name: swirlsForm.name,
+					description: swirlsForm.description ?? null,
+					slug: m.slug,
+					published: swirlsForm.enabled ?? false,
+					createdAt: new Date(m.createdAt),
+					fields,
+					submissionCount: Array.isArray(submissions) ? submissions.length : 0,
+				});
+			} catch {
+				// Form may have been deleted in Swirls
+				continue;
+			}
+		}
+
+		return result;
 	});
 
 export const getForm = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ formId: z.number() }))
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		const form = await db.query.forms.findFirst({
-			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
-			with: { fields: { orderBy: [asc(formFields.order)] } },
-		});
-		return form ?? null;
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return null;
+
+		try {
+			const swirlsForm = await swirls.client.forms.getForm({
+				id: mapping.swirlsFormId,
+			});
+			const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
+
+			return {
+				id: mapping.id,
+				swirlsFormId: mapping.swirlsFormId,
+				userId: mapping.userId,
+				name: swirlsForm.name,
+				description: swirlsForm.description ?? null,
+				slug: mapping.slug,
+				published: swirlsForm.enabled ?? false,
+				createdAt: new Date(mapping.createdAt),
+				fields,
+			} satisfies FormDisplay;
+		} catch {
+			return null;
+		}
 	});
 
 export const createForm = createServerFn({ method: "POST" })
@@ -76,16 +141,32 @@ export const createForm = createServerFn({ method: "POST" })
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const slug = generateSlug(data.name);
-		const [newForm] = await db
-			.insert(forms)
+		const name = slug.replace(/-/g, "_");
+		const projectId = env.SWIRLS_PROJECT_ID;
+
+		const { id: swirlsFormId } = await swirls.client.forms.createForm({
+			projectId,
+			name,
+			label: data.name,
+			description: data.description,
+			schema: { type: "object", properties: {} },
+			enabled: false,
+		});
+
+		const [mapping] = await db
+			.insert(formMappings)
 			.values({
 				userId: context.userId,
-				name: data.name,
-				description: data.description,
+				swirlsFormId,
 				slug,
 			})
 			.returning();
-		return newForm;
+
+		if (!mapping) {
+			throw new Error("Failed to create form mapping");
+		}
+
+		return mapping;
 	});
 
 export const updateForm = createServerFn({ method: "POST" })
@@ -98,54 +179,110 @@ export const updateForm = createServerFn({ method: "POST" })
 	)
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		const existing = await db.query.forms.findFirst({
-			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return null;
+
+		const swirlsForm = await swirls.client.forms.getForm({
+			id: mapping.swirlsFormId,
 		});
-		if (!existing) return null;
-		const [updated] = await db
-			.update(forms)
-			.set({
-				...(data.name !== undefined && { name: data.name }),
-				...(data.description !== undefined && {
-					description: data.description,
-				}),
-			})
-			.where(eq(forms.id, data.formId))
-			.returning();
-		return updated;
+
+		await swirls.client.forms.updateForm({
+			id: mapping.swirlsFormId,
+			name: data.name ?? swirlsForm.name,
+			description:
+				data.description !== undefined
+					? data.description
+					: swirlsForm.description,
+		});
+
+		return {
+			id: mapping.id,
+			swirlsFormId: mapping.swirlsFormId,
+			userId: mapping.userId,
+			name: data.name ?? swirlsForm.name,
+			description: data.description ?? swirlsForm.description ?? null,
+			slug: mapping.slug,
+			published: swirlsForm.enabled ?? false,
+			createdAt: new Date(mapping.createdAt),
+			fields: jsonSchemaToFormFields(swirlsForm.schema ?? {}),
+		} satisfies FormDisplay;
 	});
 
 export const deleteForm = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ formId: z.number() }))
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		const existing = await db.query.forms.findFirst({
-			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
-		});
-		if (!existing) return null;
-		await db.delete(forms).where(eq(forms.id, data.formId));
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return { success: false };
+
+		await swirls.client.forms.deleteForm({ id: mapping.swirlsFormId });
+		await db.delete(formMappings).where(eq(formMappings.id, data.formId));
+
 		return { success: true };
 	});
 
-// ─── Publish / Share ───────────────────────────────────────────────
+// ─── Publish / Share ─────────────────────────────────────────────────
 
 export const togglePublish = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ formId: z.number() }))
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		const existing = await db.query.forms.findFirst({
-			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return null;
+
+		const swirlsForm = await swirls.client.forms.getForm({
+			id: mapping.swirlsFormId,
 		});
-		if (!existing) return null;
-		const [updated] = await db
-			.update(forms)
-			.set({ published: !existing.published })
-			.where(eq(forms.id, data.formId))
-			.returning();
-		return updated;
+
+		await swirls.client.forms.updateForm({
+			id: mapping.swirlsFormId,
+			enabled: !swirlsForm.enabled,
+		});
+
+		return {
+			id: mapping.id,
+			swirlsFormId: mapping.swirlsFormId,
+			userId: mapping.userId,
+			name: swirlsForm.name,
+			description: swirlsForm.description ?? null,
+			slug: mapping.slug,
+			published: !swirlsForm.enabled,
+			createdAt: new Date(mapping.createdAt),
+			fields: jsonSchemaToFormFields(swirlsForm.schema ?? {}),
+		} satisfies FormDisplay;
 	});
 
-// ─── Field CRUD ────────────────────────────────────────────────────
+// ─── Field CRUD ──────────────────────────────────────────────────────
 
 export const createFormField = createServerFn({ method: "POST" })
 	.inputValidator(
@@ -166,28 +303,57 @@ export const createFormField = createServerFn({ method: "POST" })
 	)
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		// Verify ownership
-		const form = await db.query.forms.findFirst({
-			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return null;
+
+		const swirlsForm = await swirls.client.forms.getForm({
+			id: mapping.swirlsFormId,
 		});
-		if (!form) return null;
-		const [field] = await db
-			.insert(formFields)
-			.values({
-				formId: data.formId,
-				label: data.label,
-				type: data.type,
-				required: data.required,
-				order: data.order,
-			})
-			.returning();
-		return field;
+		const existingFields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
+		const newField: FormFieldInput = {
+			label: data.label,
+			type: data.type,
+			required: data.required,
+			order: data.order,
+		};
+		const allFields: FormFieldInput[] = [
+			...existingFields.map((f) => ({
+				label: f.label,
+				type: f.type,
+				required: f.required,
+				order: f.order,
+				placeholder: f.placeholder,
+				options: f.options ? JSON.stringify(f.options) : null,
+			})),
+			newField,
+		];
+		const schema = formFieldsToJsonSchema(allFields);
+
+		await swirls.client.forms.updateForm({
+			id: mapping.swirlsFormId,
+			schema,
+		});
+
+		const fields = jsonSchemaToFormFields(schema);
+		const added = fields[fields.length - 1];
+		return added;
 	});
 
 export const updateFormField = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
-			fieldId: z.number(),
+			formId: z.number(),
+			fieldKey: z.string(),
 			label: z.string().optional(),
 			type: z
 				.enum(["text", "email", "number", "textarea", "checkbox", "select"])
@@ -198,49 +364,133 @@ export const updateFormField = createServerFn({ method: "POST" })
 	)
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		// Verify ownership via join
-		const field = await db.query.formFields.findFirst({
-			where: eq(formFields.id, data.fieldId),
-			with: { form: true },
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return null;
+
+		const swirlsForm = await swirls.client.forms.getForm({
+			id: mapping.swirlsFormId,
 		});
-		if (!field || field.form.userId !== context.userId) return null;
-		const [updated] = await db
-			.update(formFields)
-			.set({
-				...(data.label !== undefined && { label: data.label }),
-				...(data.type !== undefined && { type: data.type }),
-				...(data.required !== undefined && { required: data.required }),
-				...(data.order !== undefined && { order: data.order }),
-			})
-			.where(eq(formFields.id, data.fieldId))
-			.returning();
-		return updated;
+		let fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
+		const idx = fields.findIndex((f) => f.key === data.fieldKey);
+		if (idx < 0) return null;
+
+		fields = fields.map((f, i) => ({
+			...f,
+			label: f.key === data.fieldKey ? (data.label ?? f.label) : f.label,
+			type: f.key === data.fieldKey ? (data.type ?? f.type) : f.type,
+			required:
+				f.key === data.fieldKey ? (data.required ?? f.required) : f.required,
+			order:
+				data.order !== undefined && f.key === data.fieldKey ? data.order : i,
+		}));
+
+		const schema = formFieldsToJsonSchema(
+			fields.map((f) => ({
+				label: f.label,
+				type: f.type,
+				required: f.required,
+				order: f.order,
+				placeholder: f.placeholder,
+				options: f.options ? JSON.stringify(f.options) : null,
+			})),
+		);
+
+		await swirls.client.forms.updateForm({
+			id: mapping.swirlsFormId,
+			schema,
+		});
+
+		return fields[idx];
 	});
 
 export const deleteFormField = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ fieldId: z.number() }))
+	.inputValidator(z.object({ formId: z.number(), fieldKey: z.string() }))
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		const field = await db.query.formFields.findFirst({
-			where: eq(formFields.id, data.fieldId),
-			with: { form: true },
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) return { success: false };
+
+		const swirlsForm = await swirls.client.forms.getForm({
+			id: mapping.swirlsFormId,
 		});
-		if (!field || field.form.userId !== context.userId) return null;
-		await db.delete(formFields).where(eq(formFields.id, data.fieldId));
+		const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {}).filter(
+			(f) => f.key !== data.fieldKey,
+		);
+
+		const schema = formFieldsToJsonSchema(
+			fields.map((f) => ({
+				label: f.label,
+				type: f.type,
+				required: f.required,
+				order: f.order,
+				placeholder: f.placeholder,
+				options: f.options ? JSON.stringify(f.options) : null,
+			})),
+		);
+
+		await swirls.client.forms.updateForm({
+			id: mapping.swirlsFormId,
+			schema,
+		});
+
 		return { success: true };
 	});
 
-// ─── Public Form (no auth) ────────────────────────────────────────
+// ─── Public Form (no auth) ───────────────────────────────────────────
 
 export const getPublicForm = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ slug: z.string() }))
-	.middleware([authMiddleware])
 	.handler(async ({ data }) => {
-		const form = await db.query.forms.findFirst({
-			where: and(eq(forms.slug, data.slug), eq(forms.published, true)),
-			with: { fields: { orderBy: [asc(formFields.order)] } },
-		});
-		return form ?? null;
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(eq(formMappings.slug, data.slug))
+			.limit(1);
+
+		if (!mapping) return null;
+
+		try {
+			const swirlsForm = await swirls.client.forms.getForm({
+				id: mapping.swirlsFormId,
+			});
+			if (!swirlsForm.enabled) return null;
+
+			const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
+
+			return {
+				id: mapping.id,
+				swirlsFormId: mapping.swirlsFormId,
+				userId: mapping.userId,
+				name: swirlsForm.name,
+				description: swirlsForm.description ?? null,
+				slug: mapping.slug,
+				published: true,
+				createdAt: new Date(mapping.createdAt),
+				fields,
+			} satisfies FormDisplay;
+		} catch {
+			return null;
+		}
 	});
 
 export const submitForm = createServerFn({ method: "POST" })
@@ -250,83 +500,131 @@ export const submitForm = createServerFn({ method: "POST" })
 			values: z.record(z.string(), z.string()),
 		}),
 	)
-	.middleware([authMiddleware])
 	.handler(async ({ data }) => {
-		const form = await db.query.forms.findFirst({
-			where: and(eq(forms.slug, data.slug), eq(forms.published, true)),
-			with: { fields: true },
-		});
-		if (!form) return { success: false, error: "Form not found" };
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(eq(formMappings.slug, data.slug))
+			.limit(1);
 
-		// Validate required fields
-		for (const field of form.fields) {
-			if (field.required) {
-				const val = data.values[String(field.id)];
-				if (!val || val.trim() === "") {
-					return {
-						success: false,
-						error: `"${field.label}" is required`,
-					};
+		if (!mapping) return { success: false, error: "Form not found" };
+
+		try {
+			const swirlsForm = await swirls.client.forms.getForm({
+				id: mapping.swirlsFormId,
+			});
+			if (!swirlsForm.enabled) {
+				return { success: false, error: "Form is not accepting submissions" };
+			}
+
+			const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
+
+			// Validate required
+			for (const field of fields) {
+				if (field.required) {
+					const val = data.values[field.key];
+					if (val === undefined || val === null || String(val).trim() === "") {
+						return {
+							success: false,
+							error: `"${field.label}" is required`,
+						};
+					}
 				}
 			}
+
+			// Map values: checkbox uses "true"/"false", convert to boolean for Swirls
+			const submitData: Record<string, string | number | boolean> = {};
+			for (const field of fields) {
+				const raw = data.values[field.key];
+				if (raw === undefined || raw === null) continue;
+				if (field.type === "checkbox") {
+					submitData[field.key] = raw === "true" || raw === "1";
+				} else if (field.type === "number") {
+					submitData[field.key] = Number.parseFloat(raw) || 0;
+				} else {
+					submitData[field.key] = raw;
+				}
+			}
+
+			await swirls.client.forms.submitForm({
+				formId: mapping.swirlsFormId,
+				data: submitData,
+			});
+
+			return { success: true };
+		} catch (err) {
+			return {
+				success: false,
+				error: err instanceof Error ? err.message : "Submission failed",
+			};
 		}
-
-		// Insert submission
-		const [submission] = await db
-			.insert(formSubmissions)
-			.values({ formId: form.id })
-			.returning();
-
-		// Insert values
-		const valueRows = form.fields
-			.map((field) => ({
-				submissionId: submission.id,
-				fieldId: field.id,
-				value: data.values[String(field.id)] ?? "",
-			}))
-			.filter((v) => v.value !== "");
-
-		if (valueRows.length > 0) {
-			await db.insert(formSubmissionValues).values(valueRows);
-		}
-
-		return { success: true };
 	});
 
-// ─── Submissions (authed) ──────────────────────────────────────────
+// ─── Submissions (authed) ────────────────────────────────────────────
 
 export const getFormSubmissions = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ formId: z.number() }))
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		// Verify ownership
-		const form = await db.query.forms.findFirst({
-			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
-		});
-		if (!form) return [];
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
 
-		return db.query.formSubmissions.findMany({
-			where: eq(formSubmissions.formId, data.formId),
-			with: {
-				values: {
-					with: { field: true },
-				},
-			},
-			orderBy: [desc(formSubmissions.submittedAt)],
-		});
+		if (!mapping) return [];
+
+		try {
+			const swirlsForm = await swirls.client.forms.getForm({
+				id: mapping.swirlsFormId,
+			});
+			const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
+			const fieldMap = new Map(fields.map((f) => [f.key, f]));
+
+			const { results } = await swirls.client.forms.listFormSubmissions({
+				formId: mapping.swirlsFormId,
+			});
+
+			if (!Array.isArray(results)) return [];
+
+			return results.map((sub: Record<string, unknown>) => {
+				const values: Array<{ field: FormFieldDisplay; value: string }> = [];
+				for (const [key, val] of Object.entries(sub)) {
+					if (key === "id" || key === "submittedAt" || key === "createdAt")
+						continue;
+					const field = fieldMap.get(key);
+					if (field) {
+						values.push({
+							field,
+							value: val === null || val === undefined ? "" : String(val),
+						});
+					}
+				}
+				return {
+					id: String(sub.id ?? crypto.randomUUID()),
+					submittedAt: sub.submittedAt
+						? new Date(sub.submittedAt as string | number)
+						: new Date(),
+					values,
+				} satisfies FormSubmissionDisplay;
+			});
+		} catch {
+			return [];
+		}
 	});
 
 export const deleteSubmission = createServerFn({ method: "POST" })
-	.inputValidator(z.object({ submissionId: z.number() }))
+	.inputValidator(z.object({ submissionId: z.string() }))
 	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
-		const submission = await db.query.formSubmissions.findFirst({
-			where: eq(formSubmissions.id, data.submissionId),
-			with: { form: true },
-		});
-		if (!submission || submission.form.userId !== context.userId) return null;
-		await db
-			.delete(formSubmissions)
-			.where(eq(formSubmissions.id, data.submissionId));
-		return { success: true };
+		// Swirls SDK may not expose delete form submission - document limitation
+		// For now, return success without doing anything
+		void context;
+		void data;
+		return { success: false, message: "Delete submission not supported" };
 	});

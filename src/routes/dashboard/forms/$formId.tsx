@@ -39,8 +39,10 @@ import {
 	togglePublish,
 	updateForm,
 	updateFormField,
+	type FormDisplay,
+	type FormFieldDisplay,
+	type FormSubmissionDisplay,
 } from "@/server/forms";
-import type { Form, FormField } from "@/db/schema";
 
 export const Route = createFileRoute("/dashboard/forms/$formId")({
 	loader: async ({ params }) => {
@@ -55,8 +57,6 @@ export const Route = createFileRoute("/dashboard/forms/$formId")({
 	component: FormDetailPage,
 });
 
-type FormWithFields = Form & { fields: FormField[] };
-
 const FIELD_TYPES = [
 	"text",
 	"email",
@@ -69,8 +69,8 @@ const FIELD_TYPES = [
 function FormDetailPage() {
 	const navigate = useNavigate();
 	const initialData = Route.useLoaderData();
-	const [form, setForm] = useState<FormWithFields>(
-		initialData.form as FormWithFields,
+	const [form, setForm] = useState<FormDisplay>(
+		initialData.form as FormDisplay,
 	);
 	const [submissions, setSubmissions] = useState(initialData.submissions);
 	const [tab, setTab] = useState<"fields" | "submissions">("fields");
@@ -84,7 +84,7 @@ function FormDetailPage() {
 
 	const refreshForm = async () => {
 		const data = await getForm({ data: { formId: form.id } });
-		if (data) setForm(data as FormWithFields);
+		if (data) setForm(data as FormDisplay);
 	};
 
 	const refreshSubmissions = async () => {
@@ -259,7 +259,7 @@ function EditFormInline({
 	form,
 	onSaved,
 	onCancel,
-}: { form: Form; onSaved: () => void; onCancel: () => void }) {
+}: { form: FormDisplay; onSaved: () => void; onCancel: () => void }) {
 	const [name, setName] = useState(form.name);
 	const [description, setDescription] = useState(form.description ?? "");
 	const [loading, setLoading] = useState(false);
@@ -314,7 +314,7 @@ function EditFormInline({
 function FieldsTab({
 	form,
 	onFieldsChanged,
-}: { form: FormWithFields; onFieldsChanged: () => void }) {
+}: { form: FormDisplay; onFieldsChanged: () => void }) {
 	const [showAddField, setShowAddField] = useState(false);
 
 	return (
@@ -346,7 +346,8 @@ function FieldsTab({
 			<div className="space-y-2">
 				{form.fields.map((field) => (
 					<FieldRow
-						key={field.id}
+						key={field.key}
+						formId={form.id}
 						field={field}
 						onChanged={onFieldsChanged}
 					/>
@@ -369,9 +370,14 @@ function FieldsTab({
 }
 
 function FieldRow({
+	formId,
 	field,
 	onChanged,
-}: { field: FormField; onChanged: () => void }) {
+}: {
+	formId: number;
+	field: FormFieldDisplay;
+	onChanged: () => void;
+}) {
 	const [editing, setEditing] = useState(false);
 	const [label, setLabel] = useState(field.label);
 	const [type, setType] = useState(field.type);
@@ -381,7 +387,13 @@ function FieldRow({
 	const handleSave = async () => {
 		setLoading(true);
 		await updateFormField({
-			data: { fieldId: field.id, label, type, required },
+			data: {
+				formId,
+				fieldKey: field.key,
+				label,
+				type,
+				required,
+			},
 		});
 		setLoading(false);
 		setEditing(false);
@@ -412,12 +424,12 @@ function FieldRow({
 				</Select>
 				<div className="flex items-center gap-1.5">
 					<Checkbox
-						id={`field-required-${field.id}`}
+						id={`field-required-${field.key}`}
 						checked={required}
 						onCheckedChange={(c) => setRequired(c === true)}
 					/>
 					<Label
-						htmlFor={`field-required-${field.id}`}
+						htmlFor={`field-required-${field.key}`}
 						className="cursor-pointer text-sm font-normal text-foreground"
 					>
 						Required
@@ -474,7 +486,9 @@ function FieldRow({
 				variant="ghost"
 				size="icon"
 				onClick={async () => {
-					await deleteFormField({ data: { fieldId: field.id } });
+					await deleteFormField({
+						data: { formId, fieldKey: field.key },
+					});
 					onChanged();
 				}}
 				className="hover:text-destructive"
@@ -574,27 +588,16 @@ function AddFieldForm({
 
 // ─── Submissions Tab ───────────────────────────────────────────────
 
-type SubmissionWithValues = {
-	id: number;
-	formId: number;
-	submittedAt: Date;
-	values: Array<{
-		id: number;
-		value: string;
-		field: FormField;
-	}>;
-};
-
 function SubmissionsTab({
 	form,
 	submissions,
 	onDeleted,
 }: {
-	form: FormWithFields;
-	submissions: SubmissionWithValues[];
+	form: FormDisplay;
+	submissions: FormSubmissionDisplay[];
 	onDeleted: () => void;
 }) {
-	const [expandedId, setExpandedId] = useState<number | null>(null);
+	const [expandedId, setExpandedId] = useState<string | null>(null);
 
 	if (submissions.length === 0) {
 		return (
@@ -640,7 +643,7 @@ function SubmissionsTab({
 								<ChevronDown size={16} className="text-muted-foreground" />
 							)}
 							<span className="text-sm text-foreground">
-								Submission #{sub.id}
+								Submission
 							</span>
 							<span className="text-xs text-muted-foreground">
 								{new Date(sub.submittedAt).toLocaleString()}
@@ -652,7 +655,7 @@ function SubmissionsTab({
 							size="icon"
 							onClick={async () => {
 								await deleteSubmission({
-									data: { submissionId: sub.id },
+									data: { submissionId: String(sub.id) },
 								});
 								onDeleted();
 							}}
@@ -666,7 +669,7 @@ function SubmissionsTab({
 						<div className="border-t border-border px-4 py-3">
 							<div className="space-y-2">
 								{sub.values.map((v) => (
-									<div key={v.id} className="flex gap-3">
+									<div key={v.field.key} className="flex gap-3">
 										<span className="min-w-32 text-xs font-medium text-muted-foreground">
 											{v.field.label}
 										</span>

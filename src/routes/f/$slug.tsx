@@ -13,8 +13,11 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { getPublicForm, submitForm } from "@/server/forms";
-import type { FormField } from "@/db/schema";
+import {
+	getPublicForm,
+	submitForm,
+	type FormFieldDisplay,
+} from "@/server/forms";
 
 export const Route = createFileRoute("/f/$slug")({
 	loader: ({ params }) => getPublicForm({ data: { slug: params.slug } }),
@@ -89,8 +92,8 @@ function PublicFormPage() {
 		}
 	};
 
-	const setValue = (fieldId: number, value: string) => {
-		setValues((prev) => ({ ...prev, [String(fieldId)]: value }));
+	const setValue = (fieldKey: string, value: string) => {
+		setValues((prev) => ({ ...prev, [fieldKey]: value }));
 	};
 
 	return (
@@ -116,12 +119,12 @@ function PublicFormPage() {
 					)}
 
 					<div className="space-y-5">
-						{form.fields.map((field: FormField) => (
+						{form.fields.map((field: FormFieldDisplay) => (
 							<FieldInput
-								key={field.id}
+								key={field.key}
 								field={field}
-								value={values[String(field.id)] ?? ""}
-								onChange={(val) => setValue(field.id, val)}
+								value={values[field.key] ?? ""}
+								onChange={(val) => setValue(field.key, val)}
 							/>
 						))}
 					</div>
@@ -163,11 +166,11 @@ function FieldInput({
 	value,
 	onChange,
 }: {
-	field: FormField;
+	field: FormFieldDisplay;
 	value: string;
 	onChange: (val: string) => void;
 }) {
-	const fieldId = `field-${field.id}`;
+	const fieldId = `field-${field.key}`;
 
 	return (
 		<div className="space-y-2">
@@ -207,18 +210,11 @@ function FieldInput({
 						<SelectValue placeholder="Select an option" />
 					</SelectTrigger>
 					<SelectContent>
-						{(() => {
-							try {
-								const opts = JSON.parse(field.options ?? "[]") as string[];
-								return opts.map((opt) => (
-									<SelectItem key={opt} value={opt}>
-										{opt}
-									</SelectItem>
-								));
-							} catch {
-								return null;
-							}
-						})()}
+						{(field.options ?? []).map((opt) => (
+							<SelectItem key={opt} value={opt}>
+								{opt}
+							</SelectItem>
+						))}
 					</SelectContent>
 				</Select>
 			) : (
