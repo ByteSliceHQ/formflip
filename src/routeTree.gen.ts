@@ -14,6 +14,9 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as FSlugRouteImport } from './routes/f/$slug'
+import { Route as DashboardFormsFormIdRouteImport } from './routes/dashboard/forms/$formId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const SignUpRoute = SignUpRouteImport.update({
@@ -41,6 +44,21 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardIndexRoute = DashboardIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const FSlugRoute = FSlugRouteImport.update({
+  id: '/f/$slug',
+  path: '/f/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardFormsFormIdRoute = DashboardFormsFormIdRouteImport.update({
+  id: '/forms/$formId',
+  path: '/forms/$formId',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -49,28 +67,36 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/pricing': typeof PricingRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/f/$slug': typeof FSlugRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard/forms/$formId': typeof DashboardFormsFormIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
   '/pricing': typeof PricingRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/f/$slug': typeof FSlugRoute
+  '/dashboard': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard/forms/$formId': typeof DashboardFormsFormIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/pricing': typeof PricingRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/f/$slug': typeof FSlugRoute
+  '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/dashboard/forms/$formId': typeof DashboardFormsFormIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -80,9 +106,20 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/sign-in'
     | '/sign-up'
+    | '/f/$slug'
+    | '/dashboard/'
     | '/api/auth/$'
+    | '/dashboard/forms/$formId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard' | '/pricing' | '/sign-in' | '/sign-up' | '/api/auth/$'
+  to:
+    | '/'
+    | '/pricing'
+    | '/sign-in'
+    | '/sign-up'
+    | '/f/$slug'
+    | '/dashboard'
+    | '/api/auth/$'
+    | '/dashboard/forms/$formId'
   id:
     | '__root__'
     | '/'
@@ -90,15 +127,19 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/sign-in'
     | '/sign-up'
+    | '/f/$slug'
+    | '/dashboard/'
     | '/api/auth/$'
+    | '/dashboard/forms/$formId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   PricingRoute: typeof PricingRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  FSlugRoute: typeof FSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
@@ -139,6 +180,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/': {
+      id: '/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof DashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/f/$slug': {
+      id: '/f/$slug'
+      path: '/f/$slug'
+      fullPath: '/f/$slug'
+      preLoaderRoute: typeof FSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard/forms/$formId': {
+      id: '/dashboard/forms/$formId'
+      path: '/forms/$formId'
+      fullPath: '/dashboard/forms/$formId'
+      preLoaderRoute: typeof DashboardFormsFormIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -149,12 +211,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardFormsFormIdRoute: typeof DashboardFormsFormIdRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardIndexRoute: DashboardIndexRoute,
+  DashboardFormsFormIdRoute: DashboardFormsFormIdRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   PricingRoute: PricingRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  FSlugRoute: FSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport

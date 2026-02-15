@@ -67,10 +67,12 @@ export const verification = sqliteTable("verification", {
 	identifier: text().notNull(),
 	value: text().notNull(),
 	expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
-	createdAt: integer("created_at", { mode: "timestamp" })
-		.default(sql`(unixepoch())`),
-	updatedAt: integer("updated_at", { mode: "timestamp" })
-		.default(sql`(unixepoch())`),
+	createdAt: integer("created_at", { mode: "timestamp" }).default(
+		sql`(unixepoch())`,
+	),
+	updatedAt: integer("updated_at", { mode: "timestamp" }).default(
+		sql`(unixepoch())`,
+	),
 });
 
 // ─── App Tables ────────────────────────────────────────────────────
@@ -80,6 +82,8 @@ export const forms = sqliteTable("forms", {
 	userId: text("user_id").notNull(),
 	name: text().notNull(),
 	description: text(),
+	slug: text().notNull().unique(),
+	published: integer({ mode: "boolean" }).notNull().default(false),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.notNull()
 		.default(sql`(strftime('%s', 'now') * 1000)`),
@@ -100,6 +104,8 @@ export const formFields = sqliteTable("form_fields", {
 	})
 		.notNull()
 		.default("text"),
+	placeholder: text(),
+	options: text(), // JSON array for select fields
 	required: integer({ mode: "boolean" }).notNull().default(false),
 	order: integer({ mode: "number" }).notNull().default(0),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
@@ -111,8 +117,32 @@ export const formFields = sqliteTable("form_fields", {
 		.$onUpdate(() => new Date()),
 });
 
+export const formSubmissions = sqliteTable("form_submissions", {
+	id: integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+	formId: integer("form_id", { mode: "number" })
+		.notNull()
+		.references(() => forms.id, { onDelete: "cascade" }),
+	submittedAt: integer("submitted_at", { mode: "timestamp_ms" })
+		.notNull()
+		.default(sql`(strftime('%s', 'now') * 1000)`),
+});
+
+export const formSubmissionValues = sqliteTable("form_submission_values", {
+	id: integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+	submissionId: integer("submission_id", { mode: "number" })
+		.notNull()
+		.references(() => formSubmissions.id, { onDelete: "cascade" }),
+	fieldId: integer("field_id", { mode: "number" })
+		.notNull()
+		.references(() => formFields.id, { onDelete: "cascade" }),
+	value: text().notNull().default(""),
+});
+
+// ─── Relations ─────────────────────────────────────────────────────
+
 export const formsRelations = relations(forms, ({ many }) => ({
 	fields: many(formFields),
+	submissions: many(formSubmissions),
 }));
 
 export const formFieldsRelations = relations(formFields, ({ one }) => ({
@@ -122,7 +152,36 @@ export const formFieldsRelations = relations(formFields, ({ one }) => ({
 	}),
 }));
 
+export const formSubmissionsRelations = relations(
+	formSubmissions,
+	({ one, many }) => ({
+		form: one(forms, {
+			fields: [formSubmissions.formId],
+			references: [forms.id],
+		}),
+		values: many(formSubmissionValues),
+	}),
+);
+
+export const formSubmissionValuesRelations = relations(
+	formSubmissionValues,
+	({ one }) => ({
+		submission: one(formSubmissions, {
+			fields: [formSubmissionValues.submissionId],
+			references: [formSubmissions.id],
+		}),
+		field: one(formFields, {
+			fields: [formSubmissionValues.fieldId],
+			references: [formFields.id],
+		}),
+	}),
+);
+
+// ─── Types ─────────────────────────────────────────────────────────
+
 export type Form = typeof forms.$inferSelect;
 export type NewForm = typeof forms.$inferInsert;
 export type FormField = typeof formFields.$inferSelect;
 export type NewFormField = typeof formFields.$inferInsert;
+export type FormSubmission = typeof formSubmissions.$inferSelect;
+export type FormSubmissionValue = typeof formSubmissionValues.$inferSelect;

@@ -14,6 +14,14 @@ const config = defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  ssr: {
+    external: ['bun:sqlite'],
+  },
+  build: {
+    rollupOptions: {
+      external: ['bun:sqlite'],
+    },
+  },
   plugins: [
     devtools(),
     nitro({ preset: 'bun' }),
