@@ -1,10 +1,9 @@
 import {
-	Link,
 	createFileRoute,
+	Link,
 	redirect,
 	useNavigate,
 } from "@tanstack/react-router";
-import { useId, useState } from "react";
 import {
 	ArrowLeft,
 	ChevronDown,
@@ -18,6 +17,7 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -34,14 +34,14 @@ import {
 	deleteForm,
 	deleteFormField,
 	deleteSubmission,
+	type FormDisplay,
+	type FormFieldDisplay,
+	type FormSubmissionDisplay,
 	getForm,
 	getFormSubmissions,
 	togglePublish,
 	updateForm,
 	updateFormField,
-	type FormDisplay,
-	type FormFieldDisplay,
-	type FormSubmissionDisplay,
 } from "@/server/forms";
 
 export const Route = createFileRoute("/dashboard/forms/$formId")({
@@ -139,7 +139,9 @@ function FormDetailPage() {
 										{form.name}
 									</h1>
 									{form.description && (
-										<p className="mt-1 text-muted-foreground">{form.description}</p>
+										<p className="mt-1 text-muted-foreground">
+											{form.description}
+										</p>
 									)}
 								</>
 							)}
@@ -259,7 +261,11 @@ function EditFormInline({
 	form,
 	onSaved,
 	onCancel,
-}: { form: FormDisplay; onSaved: () => void; onCancel: () => void }) {
+}: {
+	form: FormDisplay;
+	onSaved: () => void;
+	onCancel: () => void;
+}) {
 	const [name, setName] = useState(form.name);
 	const [description, setDescription] = useState(form.description ?? "");
 	const [loading, setLoading] = useState(false);
@@ -294,11 +300,7 @@ function EditFormInline({
 				placeholder="Description (optional)"
 			/>
 			<div className="flex gap-2">
-				<Button
-					type="submit"
-					size="sm"
-					disabled={loading || !name.trim()}
-				>
+				<Button type="submit" size="sm" disabled={loading || !name.trim()}>
 					{loading ? "Saving..." : "Save"}
 				</Button>
 				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
@@ -314,7 +316,10 @@ function EditFormInline({
 function FieldsTab({
 	form,
 	onFieldsChanged,
-}: { form: FormDisplay; onFieldsChanged: () => void }) {
+}: {
+	form: FormDisplay;
+	onFieldsChanged: () => void;
+}) {
 	const [showAddField, setShowAddField] = useState(false);
 
 	return (
@@ -410,7 +415,10 @@ function FieldRow({
 					className="flex-1"
 					autoFocus
 				/>
-				<Select value={type} onValueChange={(v) => setType(v)}>
+				<Select
+				value={type}
+				onValueChange={(v) => setType(v as (typeof FIELD_TYPES)[number])}
+			>
 					<SelectTrigger className="w-[120px]">
 						<SelectValue />
 					</SelectTrigger>
@@ -512,7 +520,8 @@ function AddFieldForm({
 }) {
 	const requiredId = useId();
 	const [label, setLabel] = useState("");
-	const [type, setType] = useState<string>("text");
+	const [type, setType] =
+		useState<(typeof FIELD_TYPES)[number]>("text");
 	const [required, setRequired] = useState(false);
 	const [loading, setLoading] = useState(false);
 
@@ -546,7 +555,10 @@ function AddFieldForm({
 				className="flex-1"
 				autoFocus
 			/>
-			<Select value={type} onValueChange={(v) => setType(v)}>
+			<Select
+				value={type}
+				onValueChange={(v) => setType(v as (typeof FIELD_TYPES)[number])}
+			>
 				<SelectTrigger className="w-[120px]">
 					<SelectValue />
 				</SelectTrigger>
@@ -624,10 +636,7 @@ function SubmissionsTab({
 			</div>
 
 			{submissions.map((sub) => (
-				<div
-					key={sub.id}
-					className="rounded-lg border border-border bg-card"
-				>
+				<div key={sub.id} className="rounded-lg border border-border bg-card">
 					<div className="flex items-center justify-between px-4 py-3">
 						<Button
 							type="button"
@@ -642,9 +651,7 @@ function SubmissionsTab({
 							) : (
 								<ChevronDown size={16} className="text-muted-foreground" />
 							)}
-							<span className="text-sm text-foreground">
-								Submission
-							</span>
+							<span className="text-sm text-foreground">Submission</span>
 							<span className="text-xs text-muted-foreground">
 								{new Date(sub.submittedAt).toLocaleString()}
 							</span>
@@ -677,7 +684,9 @@ function SubmissionsTab({
 									</div>
 								))}
 								{sub.values.length === 0 && (
-									<p className="text-sm text-muted-foreground">No values recorded.</p>
+									<p className="text-sm text-muted-foreground">
+										No values recorded.
+									</p>
 								)}
 							</div>
 						</div>
