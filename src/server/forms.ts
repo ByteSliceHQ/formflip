@@ -69,10 +69,12 @@ export const getForms = createServerFn({ method: "GET" })
 				const swirlsForm = await swirls.client.forms.getForm({
 					id: m.swirlsFormId,
 				});
+
 				const { results: submissions } =
 					await swirls.client.forms.listFormSubmissions({
 						formId: m.swirlsFormId,
 					});
+
 				const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
 
 				result.push({
@@ -117,6 +119,7 @@ export const getForm = createServerFn({ method: "GET" })
 			const swirlsForm = await swirls.client.forms.getForm({
 				id: mapping.swirlsFormId,
 			});
+
 			const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
 
 			return {
@@ -203,7 +206,7 @@ export const updateForm = createServerFn({ method: "POST" })
 			description:
 				data.description !== undefined
 					? data.description
-					: swirlsForm.description,
+					: (swirlsForm.description ?? undefined),
 		});
 
 		return {
@@ -338,6 +341,7 @@ export const createFormField = createServerFn({ method: "POST" })
 			})),
 			newField,
 		];
+
 		const schema = formFieldsToJsonSchema(allFields);
 
 		await swirls.client.forms.updateForm({
