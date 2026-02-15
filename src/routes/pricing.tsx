@@ -38,13 +38,13 @@ function PricingPage() {
 	];
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-6 py-20">
+		<div className="min-h-screen bg-dot-grid px-6 py-20">
 			<div className="mx-auto max-w-5xl">
 				<div className="mb-16 text-center">
-					<h1 className="mb-4 text-4xl font-bold text-white md:text-5xl">
+					<h1 className="font-display mb-4 text-4xl font-semibold italic text-foreground md:text-5xl">
 						Simple, transparent pricing
 					</h1>
-					<p className="mx-auto max-w-2xl text-lg text-gray-400">
+					<p className="mx-auto max-w-2xl text-lg text-muted-foreground">
 						Choose the plan that fits your needs. Upgrade or downgrade at any
 						time.
 					</p>
@@ -54,37 +54,39 @@ function PricingPage() {
 					{plans.map((plan) => (
 						<div
 							key={plan.name}
-							className={`relative rounded-2xl border p-8 ${
+							className={`relative rounded-2xl border p-8 shadow-warm ${
 								plan.highlighted
-									? "border-cyan-500 bg-slate-800/80 shadow-lg shadow-cyan-500/20"
-									: "border-slate-700 bg-slate-800/50"
+									? "border-primary bg-card"
+									: "border-border bg-card"
 							}`}
 						>
 							{plan.highlighted && (
-								<div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-cyan-500 px-4 py-1 text-xs font-semibold text-white">
+								<div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-semibold text-primary-foreground">
 									Most Popular
 								</div>
 							)}
-							<h2 className="mb-2 text-2xl font-bold text-white">
+							<h2 className="font-display mb-2 text-2xl font-semibold italic text-foreground">
 								{plan.name}
 							</h2>
-							<p className="mb-6 text-sm text-gray-400">{plan.description}</p>
+							<p className="mb-6 text-sm text-muted-foreground">
+								{plan.description}
+							</p>
 							<div className="mb-8">
-								<span className="text-5xl font-black text-white">
+								<span className="text-5xl font-bold text-foreground">
 									${plan.price}
 								</span>
-								<span className="text-gray-400">/month</span>
+								<span className="text-muted-foreground">/month</span>
 							</div>
 							<ul className="mb-8 space-y-3">
 								{plan.features.map((feature) => (
 									<li
 										key={feature}
-										className="flex items-center gap-3 text-gray-300"
+										className="flex items-center gap-3 text-foreground"
 									>
 										<Check
 											size={18}
 											className={
-												plan.highlighted ? "text-cyan-400" : "text-gray-500"
+												plan.highlighted ? "text-primary" : "text-muted-foreground"
 											}
 										/>
 										{feature}
@@ -92,7 +94,6 @@ function PricingPage() {
 								))}
 							</ul>
 
-							{/* Pricing action - empty for now */}
 							<SignedOut>
 								<SignInButton>
 									<Button

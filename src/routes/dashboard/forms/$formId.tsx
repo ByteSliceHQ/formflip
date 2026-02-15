@@ -109,19 +109,19 @@ function FormDetailPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-6 py-10">
+		<div className="min-h-screen bg-dot-grid px-6 py-10">
 			<div className="mx-auto max-w-4xl">
 				{/* Back link */}
 				<Link
 					to="/dashboard"
-					className="mb-6 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-white"
+					className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
 				>
 					<ArrowLeft size={16} />
 					Back to Dashboard
 				</Link>
 
 				{/* Form header */}
-				<div className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 p-6">
+				<div className="mb-6 rounded-xl border border-border bg-card p-6 shadow-warm">
 					<div className="flex items-start justify-between">
 						<div className="flex-1">
 							{editing ? (
@@ -135,9 +135,11 @@ function FormDetailPage() {
 								/>
 							) : (
 								<>
-									<h1 className="text-2xl font-bold text-white">{form.name}</h1>
+									<h1 className="font-display text-2xl font-semibold italic text-foreground">
+										{form.name}
+									</h1>
 									{form.description && (
-										<p className="mt-1 text-gray-400">{form.description}</p>
+										<p className="mt-1 text-muted-foreground">{form.description}</p>
 									)}
 								</>
 							)}
@@ -157,7 +159,7 @@ function FormDetailPage() {
 									variant="ghost"
 									size="icon"
 									onClick={handleDelete}
-									className="hover:bg-red-500/10 hover:text-red-400"
+									className="hover:bg-destructive/10 hover:text-destructive"
 								>
 									<Trash2 size={16} />
 								</Button>
@@ -166,15 +168,15 @@ function FormDetailPage() {
 					</div>
 
 					{/* Publish controls */}
-					<div className="mt-4 flex flex-wrap items-center gap-3 border-t border-slate-700 pt-4">
+					<div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
 						<Button
 							type="button"
-							variant={form.published ? "secondary" : "secondary"}
+							variant="secondary"
 							size="sm"
 							onClick={handleTogglePublish}
 							className={
 								form.published
-									? "gap-2 bg-green-500/20 text-green-300 hover:bg-green-500/30"
+									? "gap-2 bg-chart-2/20 text-chart-2 hover:bg-chart-2/30"
 									: "gap-2"
 							}
 						>
@@ -191,7 +193,7 @@ function FormDetailPage() {
 
 						{form.published && (
 							<>
-								<code className="rounded bg-slate-700 px-3 py-1.5 text-xs text-gray-300">
+								<code className="font-mono rounded bg-muted px-3 py-1.5 text-xs text-foreground">
 									{shareUrl}
 								</code>
 								<Button
@@ -207,7 +209,7 @@ function FormDetailPage() {
 							</>
 						)}
 
-						<span className="ml-auto text-sm text-gray-500">
+						<span className="ml-auto text-sm text-muted-foreground">
 							{submissions.length} submission
 							{submissions.length !== 1 ? "s" : ""}
 						</span>
@@ -215,7 +217,7 @@ function FormDetailPage() {
 				</div>
 
 				{/* Tab bar */}
-				<div className="mb-6 flex gap-1 rounded-lg bg-slate-800/50 p-1">
+				<div className="mb-6 flex gap-1 rounded-lg bg-muted/50 p-1">
 					<Button
 						type="button"
 						variant={tab === "fields" ? "secondary" : "ghost"}
@@ -318,7 +320,9 @@ function FieldsTab({
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center justify-between">
-				<h2 className="text-lg font-semibold text-white">Form Fields</h2>
+				<h2 className="font-display text-lg font-semibold italic text-foreground">
+					Form Fields
+				</h2>
 				<Button
 					type="button"
 					size="sm"
@@ -331,9 +335,9 @@ function FieldsTab({
 			</div>
 
 			{form.fields.length === 0 && !showAddField && (
-				<div className="rounded-xl border border-dashed border-slate-700 py-12 text-center">
-					<p className="text-gray-400">No fields yet.</p>
-					<p className="mt-1 text-sm text-gray-500">
+				<div className="rounded-xl border border-dashed border-border py-12 text-center">
+					<p className="text-muted-foreground">No fields yet.</p>
+					<p className="mt-1 text-sm text-muted-foreground">
 						Add fields to start collecting responses.
 					</p>
 				</div>
@@ -386,7 +390,7 @@ function FieldRow({
 
 	if (editing) {
 		return (
-			<div className="flex flex-wrap items-center gap-2 rounded-lg border border-cyan-500/30 bg-slate-800/50 p-3">
+			<div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-card p-3">
 				<Input
 					type="text"
 					value={label}
@@ -414,7 +418,7 @@ function FieldRow({
 					/>
 					<Label
 						htmlFor={`field-required-${field.id}`}
-						className="cursor-pointer text-sm font-normal text-gray-300"
+						className="cursor-pointer text-sm font-normal text-foreground"
 					>
 						Required
 					</Label>
@@ -446,14 +450,14 @@ function FieldRow({
 	}
 
 	return (
-		<div className="flex items-center gap-3 rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3">
-			<GripVertical size={14} className="text-gray-600" />
-			<span className="flex-1 text-sm text-white">{field.label}</span>
-			<span className="rounded bg-slate-700 px-2 py-0.5 text-xs text-gray-400">
+		<div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
+			<GripVertical size={14} className="text-muted-foreground" />
+			<span className="flex-1 text-sm text-foreground">{field.label}</span>
+			<span className="font-mono rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
 				{field.type}
 			</span>
 			{field.required && (
-				<span className="rounded bg-cyan-500/20 px-2 py-0.5 text-xs text-cyan-300">
+				<span className="rounded bg-primary/20 px-2 py-0.5 text-xs text-primary">
 					required
 				</span>
 			)}
@@ -473,7 +477,7 @@ function FieldRow({
 					await deleteFormField({ data: { fieldId: field.id } });
 					onChanged();
 				}}
-				className="hover:text-red-400"
+				className="hover:text-destructive"
 			>
 				<Trash2 size={14} />
 			</Button>
@@ -518,7 +522,7 @@ function AddFieldForm({
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-slate-600 p-3"
+			className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border p-3"
 		>
 			<Input
 				type="text"
@@ -548,7 +552,7 @@ function AddFieldForm({
 				/>
 				<Label
 					htmlFor={requiredId}
-					className="cursor-pointer text-sm font-normal text-gray-300"
+					className="cursor-pointer text-sm font-normal text-foreground"
 				>
 					Required
 				</Label>
@@ -594,9 +598,9 @@ function SubmissionsTab({
 
 	if (submissions.length === 0) {
 		return (
-			<div className="rounded-xl border border-dashed border-slate-700 py-12 text-center">
-				<p className="text-gray-400">No submissions yet.</p>
-				<p className="mt-1 text-sm text-gray-500">
+			<div className="rounded-xl border border-dashed border-border py-12 text-center">
+				<p className="text-muted-foreground">No submissions yet.</p>
+				<p className="mt-1 text-sm text-muted-foreground">
 					{form.published
 						? "Share your form to start collecting responses."
 						: "Publish your form to start collecting responses."}
@@ -608,8 +612,10 @@ function SubmissionsTab({
 	return (
 		<div className="space-y-2">
 			<div className="flex items-center justify-between">
-				<h2 className="text-lg font-semibold text-white">Submissions</h2>
-				<span className="text-sm text-gray-500">
+				<h2 className="font-display text-lg font-semibold italic text-foreground">
+					Submissions
+				</h2>
+				<span className="text-sm text-muted-foreground">
 					{submissions.length} total
 				</span>
 			</div>
@@ -617,7 +623,7 @@ function SubmissionsTab({
 			{submissions.map((sub) => (
 				<div
 					key={sub.id}
-					className="rounded-lg border border-slate-700 bg-slate-800/50"
+					className="rounded-lg border border-border bg-card"
 				>
 					<div className="flex items-center justify-between px-4 py-3">
 						<Button
@@ -629,14 +635,14 @@ function SubmissionsTab({
 							className="flex flex-1 items-center justify-start gap-2"
 						>
 							{expandedId === sub.id ? (
-								<ChevronUp size={16} className="text-gray-400" />
+								<ChevronUp size={16} className="text-muted-foreground" />
 							) : (
-								<ChevronDown size={16} className="text-gray-400" />
+								<ChevronDown size={16} className="text-muted-foreground" />
 							)}
-							<span className="text-sm text-white">
+							<span className="text-sm text-foreground">
 								Submission #{sub.id}
 							</span>
-							<span className="text-xs text-gray-500">
+							<span className="text-xs text-muted-foreground">
 								{new Date(sub.submittedAt).toLocaleString()}
 							</span>
 						</Button>
@@ -650,25 +656,25 @@ function SubmissionsTab({
 								});
 								onDeleted();
 							}}
-							className="hover:text-red-400"
+							className="hover:text-destructive"
 						>
 							<Trash2 size={14} />
 						</Button>
 					</div>
 
 					{expandedId === sub.id && (
-						<div className="border-t border-slate-700 px-4 py-3">
+						<div className="border-t border-border px-4 py-3">
 							<div className="space-y-2">
 								{sub.values.map((v) => (
 									<div key={v.id} className="flex gap-3">
-										<span className="min-w-32 text-xs font-medium text-gray-400">
+										<span className="min-w-32 text-xs font-medium text-muted-foreground">
 											{v.field.label}
 										</span>
-										<span className="text-sm text-white">{v.value}</span>
+										<span className="text-sm text-foreground">{v.value}</span>
 									</div>
 								))}
 								{sub.values.length === 0 && (
-									<p className="text-sm text-gray-500">No values recorded.</p>
+									<p className="text-sm text-muted-foreground">No values recorded.</p>
 								)}
 							</div>
 						</div>

@@ -38,30 +38,38 @@ function SignUpPage() {
 	};
 
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-6">
-			<div className="w-full max-w-md">
+		<div className="relative flex min-h-screen items-center justify-center bg-dot-grid px-6">
+			<p
+				className="font-display pointer-events-none absolute inset-0 flex items-center justify-center text-[clamp(6rem,18vw,14rem)] font-semibold italic text-foreground/5 select-none"
+				aria-hidden
+			>
+				FormFlip
+			</p>
+			<div className="relative w-full max-w-md">
 				<div className="mb-8 text-center">
-					<div className="mb-4 inline-flex items-center gap-2 text-cyan-400">
+					<div className="mb-4 inline-flex items-center gap-2 text-primary">
 						<Sparkles className="h-8 w-8" />
 					</div>
-					<h1 className="text-3xl font-bold text-white">Create an account</h1>
-					<p className="mt-2 text-gray-400">
+					<h1 className="font-display text-3xl font-semibold italic text-foreground">
+						Create an account
+					</h1>
+					<p className="mt-2 text-muted-foreground">
 						Get started with FormFlip for free
 					</p>
 				</div>
 
 				<form
 					onSubmit={handleSubmit}
-					className="rounded-xl border border-slate-700 bg-slate-800/50 p-6"
+					className="rounded-xl border border-border bg-card p-6 shadow-warm"
 				>
 					{error && (
-						<div className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
+						<div className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
 							{error}
 						</div>
 					)}
 					<div className="space-y-4">
 						<div className="space-y-2">
-							<Label htmlFor="name" className="text-gray-300">
+							<Label htmlFor="name" className="text-foreground">
 								Name
 							</Label>
 							<Input
@@ -74,7 +82,7 @@ function SignUpPage() {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="email" className="text-gray-300">
+							<Label htmlFor="email" className="text-foreground">
 								Email
 							</Label>
 							<Input
@@ -87,7 +95,7 @@ function SignUpPage() {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="password" className="text-gray-300">
+							<Label htmlFor="password" className="text-foreground">
 								Password
 							</Label>
 							<Input
@@ -106,11 +114,11 @@ function SignUpPage() {
 					</Button>
 				</form>
 
-				<p className="mt-6 text-center text-sm text-gray-400">
+				<p className="mt-6 text-center text-sm text-muted-foreground">
 					Already have an account?{" "}
 					<Link
 						to="/sign-in"
-						className="font-medium text-cyan-400 hover:text-cyan-300"
+						className="font-medium text-primary transition-colors hover:opacity-80"
 					>
 						Sign in
 					</Link>

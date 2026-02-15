@@ -32,13 +32,15 @@ function DashboardPage() {
 	const publishedCount = forms.filter((f) => f.published).length;
 
 	return (
-		<div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-6 py-10">
+		<div className="min-h-screen bg-dot-grid px-6 py-10">
 			<div className="mx-auto max-w-4xl">
 				{/* Header */}
 				<div className="mb-8 flex items-center justify-between">
 					<div>
-						<h1 className="text-3xl font-bold text-white">Your Forms</h1>
-						<p className="mt-1 text-gray-400">
+						<h1 className="font-display text-3xl font-semibold italic text-foreground">
+							Your Forms
+						</h1>
+						<p className="mt-1 text-muted-foreground">
 							Create, manage, and collect responses.
 						</p>
 					</div>
@@ -56,19 +58,19 @@ function DashboardPage() {
 				{/* Stats bar */}
 				{forms.length > 0 && (
 					<div className="mb-6 grid grid-cols-3 gap-4">
-						<div className="rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3">
-							<p className="text-xs text-gray-500">Total Forms</p>
-							<p className="text-2xl font-bold text-white">{forms.length}</p>
+						<div className="rounded-lg border border-border bg-card px-4 py-3 shadow-warm">
+							<p className="text-xs text-muted-foreground">Total Forms</p>
+							<p className="text-2xl font-bold text-foreground">{forms.length}</p>
 						</div>
-						<div className="rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3">
-							<p className="text-xs text-gray-500">Published</p>
-							<p className="text-2xl font-bold text-green-400">
+						<div className="rounded-lg border border-border bg-card px-4 py-3 shadow-warm">
+							<p className="text-xs text-muted-foreground">Published</p>
+							<p className="text-2xl font-bold text-chart-2">
 								{publishedCount}
 							</p>
 						</div>
-						<div className="rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3">
-							<p className="text-xs text-gray-500">Total Submissions</p>
-							<p className="text-2xl font-bold text-cyan-400">
+						<div className="rounded-lg border border-border bg-card px-4 py-3 shadow-warm">
+							<p className="text-xs text-muted-foreground">Total Submissions</p>
+							<p className="text-2xl font-bold text-primary">
 								{totalSubmissions}
 							</p>
 						</div>
@@ -88,10 +90,10 @@ function DashboardPage() {
 
 				{/* Empty state */}
 				{forms.length === 0 && !showCreateForm && (
-					<div className="rounded-xl border border-dashed border-slate-700 py-16 text-center">
-						<FileText className="mx-auto mb-4 h-12 w-12 text-gray-600" />
-						<p className="text-lg text-gray-400">No forms yet.</p>
-						<p className="mt-1 text-sm text-gray-500">
+					<div className="rounded-xl border border-dashed border-border py-16 text-center">
+						<FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+						<p className="text-lg text-muted-foreground">No forms yet.</p>
+						<p className="mt-1 text-sm text-muted-foreground">
 							Click "New Form" to get started.
 						</p>
 					</div>
@@ -140,30 +142,30 @@ function FormCard({
 		<Link
 			to="/dashboard/forms/$formId"
 			params={{ formId: String(form.id) }}
-			className="block rounded-xl border border-slate-700 bg-slate-800/50 transition-all hover:border-slate-600 hover:shadow-lg hover:shadow-cyan-500/5"
+			className="hover-lift block rounded-xl border border-border bg-card shadow-warm"
 		>
 			<div className="flex items-center gap-4 p-5">
 				<div className="flex-1 min-w-0">
 					<div className="flex items-center gap-2">
-						<h3 className="text-lg font-semibold text-white truncate">
+						<h3 className="truncate text-lg font-semibold text-foreground">
 							{form.name}
 						</h3>
 						{form.published ? (
-							<span className="shrink-0 rounded-full bg-green-500/20 px-2 py-0.5 text-xs text-green-300">
+							<span className="shrink-0 rounded-full bg-chart-2/20 px-2 py-0.5 text-xs text-chart-2">
 								Published
 							</span>
 						) : (
-							<span className="shrink-0 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-gray-400">
+							<span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
 								Draft
 							</span>
 						)}
 					</div>
 					{form.description && (
-						<p className="mt-0.5 text-sm text-gray-400 truncate">
+						<p className="mt-0.5 truncate text-sm text-muted-foreground">
 							{form.description}
 						</p>
 					)}
-					<div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
+					<div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
 						<span>{form.fields.length} fields</span>
 						<span className="flex items-center gap-1">
 							<Inbox size={12} />
@@ -187,7 +189,7 @@ function FormCard({
 						variant="ghost"
 						size="icon"
 						onClick={handleDelete}
-						className="text-gray-400 hover:bg-red-500/10 hover:text-red-400"
+						className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
 						title="Delete"
 					>
 						<Trash2 size={16} />
@@ -223,9 +225,9 @@ function CreateFormCard({
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="mb-6 rounded-xl border border-cyan-500/30 bg-slate-800/50 p-5"
+			className="mb-6 rounded-xl border border-primary/30 bg-card p-5 shadow-warm"
 		>
-			<h3 className="mb-4 text-lg font-semibold text-white">Create New Form</h3>
+			<h3 className="mb-4 text-lg font-semibold text-foreground">Create New Form</h3>
 			<div className="space-y-3">
 				<Input
 					type="text"

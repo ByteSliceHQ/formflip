@@ -50,12 +50,12 @@ export function UserButton() {
 					<User size={16} />
 				)}
 			</Button>
-			<div className="invisible absolute right-0 top-full z-50 mt-2 min-w-48 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl group-hover:visible">
-				<div className="border-b border-slate-700 px-4 py-2">
-					<p className="text-sm font-medium text-white">
+			<div className="invisible absolute right-0 top-full z-50 mt-2 min-w-48 rounded-lg border border-border bg-popover py-1 shadow-warm group-hover:visible">
+				<div className="border-b border-border px-4 py-2">
+					<p className="text-sm font-medium text-popover-foreground">
 						{session.user.name}
 					</p>
-					<p className="text-xs text-gray-400">{session.user.email}</p>
+					<p className="text-xs text-muted-foreground">{session.user.email}</p>
 				</div>
 				<Button
 					type="button"

@@ -31,10 +31,12 @@ function PublicFormPage() {
 
 	if (!form) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+			<div className="flex min-h-screen items-center justify-center bg-dot-grid">
 				<div className="text-center">
-					<h1 className="text-2xl font-bold text-white">Form not found</h1>
-					<p className="mt-2 text-gray-400">
+					<h1 className="font-display text-2xl font-semibold italic text-foreground">
+						Form not found
+					</h1>
+					<p className="mt-2 text-muted-foreground">
 						This form doesn't exist or is no longer accepting responses.
 					</p>
 				</div>
@@ -44,15 +46,15 @@ function PublicFormPage() {
 
 	if (submitted) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-6">
+			<div className="flex min-h-screen items-center justify-center bg-dot-grid px-6">
 				<div className="w-full max-w-lg text-center">
-					<div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
-						<CheckCircle className="h-8 w-8 text-green-400" />
+					<div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-chart-2/20">
+						<CheckCircle className="h-8 w-8 text-chart-2" />
 					</div>
-					<h1 className="text-2xl font-bold text-white">
+					<h1 className="font-display text-2xl font-semibold italic text-foreground">
 						Response submitted
 					</h1>
-					<p className="mt-2 text-gray-400">
+					<p className="mt-2 text-muted-foreground">
 						Thank you for filling out {form.name}.
 					</p>
 					<Button
@@ -92,21 +94,23 @@ function PublicFormPage() {
 	};
 
 	return (
-		<div className="flex min-h-screen items-start justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-6 py-12">
+		<div className="flex min-h-screen items-start justify-center bg-dot-grid px-6 py-12">
 			<div className="w-full max-w-lg">
 				<div className="mb-8">
-					<h1 className="text-3xl font-bold text-white">{form.name}</h1>
+					<h1 className="font-display text-3xl font-semibold italic text-foreground">
+						{form.name}
+					</h1>
 					{form.description && (
-						<p className="mt-2 text-gray-400">{form.description}</p>
+						<p className="mt-2 text-muted-foreground">{form.description}</p>
 					)}
 				</div>
 
 				<form
 					onSubmit={handleSubmit}
-					className="rounded-xl border border-slate-700 bg-slate-800/50 p-6"
+					className="rounded-xl border border-border bg-card p-6 shadow-warm"
 				>
 					{error && (
-						<div className="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
+						<div className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
 							{error}
 						</div>
 					)}
@@ -123,7 +127,7 @@ function PublicFormPage() {
 					</div>
 
 					{form.fields.length === 0 && (
-						<p className="py-8 text-center text-gray-500">
+						<p className="py-8 text-center text-muted-foreground">
 							This form has no fields yet.
 						</p>
 					)}
@@ -146,7 +150,7 @@ function PublicFormPage() {
 					)}
 				</form>
 
-				<p className="mt-6 text-center text-xs text-gray-600">
+				<p className="mt-6 text-center text-xs text-muted-foreground">
 					Powered by FormFlip
 				</p>
 			</div>
@@ -167,9 +171,9 @@ function FieldInput({
 
 	return (
 		<div className="space-y-2">
-			<Label htmlFor={fieldId} className="text-gray-300">
+			<Label htmlFor={fieldId} className="text-foreground">
 				{field.label}
-				{field.required && <span className="ml-1 text-red-400">*</span>}
+				{field.required && <span className="ml-1 text-destructive">*</span>}
 			</Label>
 
 			{field.type === "textarea" ? (
@@ -192,7 +196,7 @@ function FieldInput({
 					/>
 					<Label
 						htmlFor={fieldId}
-						className="cursor-pointer text-sm font-normal text-gray-300"
+						className="cursor-pointer text-sm font-normal text-foreground"
 					>
 						{field.placeholder ?? "Yes"}
 					</Label>
