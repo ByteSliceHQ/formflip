@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import { SignedIn, SignedOut, SignInButton } from "@/components/auth";
+import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({ component: LandingPage });
@@ -56,6 +57,7 @@ const features = [
 function LandingPage() {
 	return (
 		<div className="min-h-screen bg-dot-grid">
+			<Header />
 			{/* Hero */}
 			<section className="relative overflow-hidden px-6 py-24">
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,oklch(0.52_0.175_25/0.08),transparent)]" />

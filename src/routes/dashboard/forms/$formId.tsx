@@ -14,6 +14,7 @@ import {
 	ChevronDown,
 	ChevronUp,
 	ClipboardCopy,
+	ExternalLinkIcon,
 	Eye,
 	EyeOff,
 	GripVertical,
@@ -221,12 +222,17 @@ function FormDetailPage() {
 								<code className="font-mono rounded bg-muted px-3 py-1.5 text-xs text-foreground">
 									{shareUrl}
 								</code>
+								<Button asChild variant="secondary" size="sm">
+									<Link to={shareUrl} target="_blank">
+										<ExternalLinkIcon size={14} />
+										Open in new tab
+									</Link>
+								</Button>
 								<Button
 									type="button"
 									variant="secondary"
 									size="sm"
 									onClick={handleCopyLink}
-									className="gap-1.5"
 								>
 									<ClipboardCopy size={14} />
 									{copied ? "Copied!" : "Copy link"}

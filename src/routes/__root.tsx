@@ -53,7 +53,6 @@ function RootComponent() {
 			</head>
 			<body>
 				<NavProgress />
-				<Header />
 				<Outlet />
 				<Scripts />
 			</body>
