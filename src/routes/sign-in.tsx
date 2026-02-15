@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
@@ -40,9 +40,7 @@ function SignInPage() {
 						<Sparkles className="h-8 w-8" />
 					</div>
 					<h1 className="text-3xl font-bold text-white">Welcome back</h1>
-					<p className="mt-2 text-gray-400">
-						Sign in to your FormFlip account
-					</p>
+					<p className="mt-2 text-gray-400">Sign in to your FormFlip account</p>
 				</div>
 
 				<form

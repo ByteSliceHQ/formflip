@@ -1,21 +1,28 @@
+import { Database } from "bun:sqlite";
+import { createServerOnlyFn } from "@tanstack/react-start";
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import { env } from "@/env";
 import * as schema from "./schema";
 
-const createDb = async () => {
-	if (process.env.DB_URL && process.env.DB_TOKEN) {
-		const { createClient } = await import("@libsql/client/web");
-		const { drizzle } = await import("drizzle-orm/libsql");
-		const client = createClient({
-			url: process.env.DB_URL,
-			authToken: process.env.DB_TOKEN,
-		});
-		return drizzle({ client, schema });
+function getConnectionString(): string {
+	const base = env.DB_URL ?? "sqlite.db";
+
+	if (!env.DB_TOKEN) {
+		return base;
 	}
-	const { Database } = await import("bun:sqlite");
-	const { drizzle } = await import("drizzle-orm/bun-sqlite");
-	const sqlite = new Database("sqlite.db");
+
+	const sep = base.includes("?") ? "&" : "?";
+	return `${base}${sep}auth_token=${encodeURIComponent(env.DB_TOKEN)}`;
+}
+
+const createDb = createServerOnlyFn(() => {
+	const sqlite = new Database(getConnectionString());
+
+	// TODO: do we need these?
 	sqlite.run("PRAGMA journal_mode = WAL;");
 	sqlite.run("PRAGMA foreign_keys = ON;");
-	return drizzle({ client: sqlite, schema });
-};
 
-export const db = await createDb();
+	return drizzle({ client: sqlite, schema });
+});
+
+export const db = createDb();

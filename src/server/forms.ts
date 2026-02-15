@@ -1,14 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/db/client";
 import {
 	formFields,
-	formSubmissionValues,
 	formSubmissions,
+	formSubmissionValues,
 	forms,
 } from "@/db/schema";
-import { authedFn } from "@/lib/auth-guard";
+import { authMiddleware } from "@/lib/auth-guard";
 
 // ─── Slug Helpers ──────────────────────────────────────────────────
 
@@ -23,8 +23,9 @@ function generateSlug(name: string): string {
 
 // ─── Form CRUD ─────────────────────────────────────────────────────
 
-export const getForms = authedFn({ method: "GET" }).handler(
-	async ({ context }) => {
+export const getForms = createServerFn({ method: "GET" })
+	.middleware([authMiddleware])
+	.handler(async ({ context }) => {
 		const userForms = await db.query.forms.findMany({
 			where: eq(forms.userId, context.userId),
 			with: { fields: { orderBy: [asc(formFields.order)] } },
@@ -55,11 +56,11 @@ export const getForms = authedFn({ method: "GET" }).handler(
 			...f,
 			submissionCount: countMap.get(f.id) ?? 0,
 		}));
-	},
-);
+	});
 
-export const getForm = authedFn({ method: "GET" })
+export const getForm = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ formId: z.number() }))
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const form = await db.query.forms.findFirst({
 			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
@@ -68,10 +69,11 @@ export const getForm = authedFn({ method: "GET" })
 		return form ?? null;
 	});
 
-export const createForm = authedFn({ method: "POST" })
+export const createForm = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({ name: z.string().min(1), description: z.string().optional() }),
 	)
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const slug = generateSlug(data.name);
 		const [newForm] = await db
@@ -86,7 +88,7 @@ export const createForm = authedFn({ method: "POST" })
 		return newForm;
 	});
 
-export const updateForm = authedFn({ method: "POST" })
+export const updateForm = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
 			formId: z.number(),
@@ -94,6 +96,7 @@ export const updateForm = authedFn({ method: "POST" })
 			description: z.string().optional(),
 		}),
 	)
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const existing = await db.query.forms.findFirst({
 			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
@@ -112,8 +115,9 @@ export const updateForm = authedFn({ method: "POST" })
 		return updated;
 	});
 
-export const deleteForm = authedFn({ method: "POST" })
+export const deleteForm = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ formId: z.number() }))
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const existing = await db.query.forms.findFirst({
 			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
@@ -125,8 +129,9 @@ export const deleteForm = authedFn({ method: "POST" })
 
 // ─── Publish / Share ───────────────────────────────────────────────
 
-export const togglePublish = authedFn({ method: "POST" })
+export const togglePublish = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ formId: z.number() }))
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const existing = await db.query.forms.findFirst({
 			where: and(eq(forms.id, data.formId), eq(forms.userId, context.userId)),
@@ -142,7 +147,7 @@ export const togglePublish = authedFn({ method: "POST" })
 
 // ─── Field CRUD ────────────────────────────────────────────────────
 
-export const createFormField = authedFn({ method: "POST" })
+export const createFormField = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
 			formId: z.number(),
@@ -159,6 +164,7 @@ export const createFormField = authedFn({ method: "POST" })
 			order: z.number(),
 		}),
 	)
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		// Verify ownership
 		const form = await db.query.forms.findFirst({
@@ -178,7 +184,7 @@ export const createFormField = authedFn({ method: "POST" })
 		return field;
 	});
 
-export const updateFormField = authedFn({ method: "POST" })
+export const updateFormField = createServerFn({ method: "POST" })
 	.inputValidator(
 		z.object({
 			fieldId: z.number(),
@@ -190,6 +196,7 @@ export const updateFormField = authedFn({ method: "POST" })
 			order: z.number().optional(),
 		}),
 	)
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		// Verify ownership via join
 		const field = await db.query.formFields.findFirst({
@@ -210,8 +217,9 @@ export const updateFormField = authedFn({ method: "POST" })
 		return updated;
 	});
 
-export const deleteFormField = authedFn({ method: "POST" })
+export const deleteFormField = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ fieldId: z.number() }))
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const field = await db.query.formFields.findFirst({
 			where: eq(formFields.id, data.fieldId),
@@ -226,6 +234,7 @@ export const deleteFormField = authedFn({ method: "POST" })
 
 export const getPublicForm = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ slug: z.string() }))
+	.middleware([authMiddleware])
 	.handler(async ({ data }) => {
 		const form = await db.query.forms.findFirst({
 			where: and(eq(forms.slug, data.slug), eq(forms.published, true)),
@@ -241,6 +250,7 @@ export const submitForm = createServerFn({ method: "POST" })
 			values: z.record(z.string(), z.string()),
 		}),
 	)
+	.middleware([authMiddleware])
 	.handler(async ({ data }) => {
 		const form = await db.query.forms.findFirst({
 			where: and(eq(forms.slug, data.slug), eq(forms.published, true)),
@@ -285,8 +295,9 @@ export const submitForm = createServerFn({ method: "POST" })
 
 // ─── Submissions (authed) ──────────────────────────────────────────
 
-export const getFormSubmissions = authedFn({ method: "GET" })
+export const getFormSubmissions = createServerFn({ method: "GET" })
 	.inputValidator(z.object({ formId: z.number() }))
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		// Verify ownership
 		const form = await db.query.forms.findFirst({
@@ -305,8 +316,9 @@ export const getFormSubmissions = authedFn({ method: "GET" })
 		});
 	});
 
-export const deleteSubmission = authedFn({ method: "POST" })
+export const deleteSubmission = createServerFn({ method: "POST" })
 	.inputValidator(z.object({ submissionId: z.number() }))
+	.middleware([authMiddleware])
 	.handler(async ({ context, data }) => {
 		const submission = await db.query.formSubmissions.findFirst({
 			where: eq(formSubmissions.id, data.submissionId),

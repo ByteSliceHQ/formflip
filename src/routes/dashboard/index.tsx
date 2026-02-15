@@ -1,20 +1,13 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { Eye, EyeOff, FileText, Inbox, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
-import {
-	Eye,
-	EyeOff,
-	FileText,
-	Inbox,
-	Plus,
-	Trash2,
-} from "lucide-react";
+import type { Form, FormField } from "@/db/schema";
 import {
 	createForm,
 	deleteForm,
 	getForms,
 	togglePublish,
 } from "@/server/forms";
-import type { Form, FormField } from "@/db/schema";
 
 export const Route = createFileRoute("/dashboard/")({
 	loader: () => getForms(),
@@ -33,10 +26,7 @@ function DashboardPage() {
 		setForms(data as FormWithMeta[]);
 	};
 
-	const totalSubmissions = forms.reduce(
-		(sum, f) => sum + f.submissionCount,
-		0,
-	);
+	const totalSubmissions = forms.reduce((sum, f) => sum + f.submissionCount, 0);
 	const publishedCount = forms.filter((f) => f.published).length;
 
 	return (
@@ -205,7 +195,10 @@ function FormCard({
 function CreateFormCard({
 	onCreated,
 	onCancel,
-}: { onCreated: () => void; onCancel: () => void }) {
+}: {
+	onCreated: () => void;
+	onCancel: () => void;
+}) {
 	const [name, setName] = useState("");
 	const [description, setDescription] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -226,9 +219,7 @@ function CreateFormCard({
 			onSubmit={handleSubmit}
 			className="mb-6 rounded-xl border border-cyan-500/30 bg-slate-800/50 p-5"
 		>
-			<h3 className="mb-4 text-lg font-semibold text-white">
-				Create New Form
-			</h3>
+			<h3 className="mb-4 text-lg font-semibold text-white">Create New Form</h3>
 			<div className="space-y-3">
 				<input
 					type="text"
@@ -236,7 +227,6 @@ function CreateFormCard({
 					value={name}
 					onChange={(e) => setName(e.target.value)}
 					className="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-gray-400 focus:border-cyan-500 focus:outline-none"
-					autoFocus
 				/>
 				<input
 					type="text"

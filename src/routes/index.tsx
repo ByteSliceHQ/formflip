@@ -1,9 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
-import {
-	SignedIn,
-	SignedOut,
-	SignInButton,
-} from "@/components/AuthComponents";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
 	ArrowRight,
 	FileText,
@@ -13,6 +8,7 @@ import {
 	Settings,
 	Zap,
 } from "lucide-react";
+import { SignedIn, SignedOut, SignInButton } from "@/components/AuthComponents";
 
 export const Route = createFileRoute("/")({ component: LandingPage });
 
