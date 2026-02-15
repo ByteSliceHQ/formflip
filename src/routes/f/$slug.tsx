@@ -1,3 +1,4 @@
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { CheckCircle, Send } from "lucide-react";
@@ -19,14 +20,21 @@ import {
 	type FormFieldDisplay,
 } from "@/server/forms";
 
+const publicFormQueryOptions = (slug: string) =>
+	queryOptions({
+		queryKey: ["publicForm", slug],
+		queryFn: () => getPublicForm({ data: { slug } }),
+	});
+
 export const Route = createFileRoute("/f/$slug")({
-	loader: ({ params }) => getPublicForm({ data: { slug: params.slug } }),
+	loader: ({ params, context }) =>
+		context.queryClient.ensureQueryData(publicFormQueryOptions(params.slug)),
 	component: PublicFormPage,
 });
 
 function PublicFormPage() {
-	const form = Route.useLoaderData();
 	const { slug } = Route.useParams();
+	const { data: form } = useSuspenseQuery(publicFormQueryOptions(slug));
 	const [values, setValues] = useState<Record<string, string>>({});
 	const [error, setError] = useState("");
 	const [submitted, setSubmitted] = useState(false);

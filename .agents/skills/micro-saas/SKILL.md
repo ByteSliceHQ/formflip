@@ -135,6 +135,7 @@ my-saas/
     "@swirls/sdk": "^0.0.4",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
+    "@tanstack/react-query": "^5.90.0",
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/react-start": "^1.132.0",
@@ -829,13 +830,16 @@ export const deleteItem = authedFn({ method: "POST" })
 
 ### Root Layout (src/routes/__root.tsx)
 
+Use `createRootRouteWithContext<RouterContext>()` so child route loaders can access `queryClient` for TanStack Query:
+
 ```typescript
 import {
+  createRootRouteWithContext,
   HeadContent,
   Outlet,
   Scripts,
-  createRootRoute,
 } from "@tanstack/react-router";
+import type { RouterContext } from "@/router";
 import { Header } from "@/components/Header";
 import { registerForms } from "@/swirls.gen";
 import appCss from "@/styles.css?url";
@@ -843,7 +847,7 @@ import appCss from "@/styles.css?url";
 // Register Swirls forms at app boot
 registerForms();
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -873,19 +877,29 @@ function RootComponent() {
 
 ### Router Instance (src/router.tsx)
 
+Provide a `QueryClient` in router context so route loaders can use `ensureQueryData` and components can use `useSuspenseQuery`:
+
 ```typescript
+import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
-export const getRouter = () => {
+export type RouterContext = {
+  queryClient: QueryClient;
+};
+
+export function getRouter() {
+  const queryClient = new QueryClient();
+
   const router = createRouter({
     routeTree,
-    context: {},
+    context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
   });
+
   return router;
-};
+}
 
 declare module "@tanstack/react-router" {
   interface Register {
@@ -904,7 +918,10 @@ export const startInstance = createStart(() => ({}));
 
 ### Protected Dashboard Route (src/routes/dashboard.tsx)
 
+Use TanStack Query in loaders and components so route transitions trigger the loader promise (e.g. for a navigation progress bar) and data is cached:
+
 ```typescript
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
@@ -921,14 +938,20 @@ const authGuard = createServerFn({ method: "GET" }).handler(async () => {
   return { userId: session.user.id };
 });
 
+const itemsQueryOptions = queryOptions({
+  queryKey: ["items"],
+  queryFn: () => getItems(),
+});
+
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: () => authGuard(),
-  loader: () => getItems(),
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(itemsQueryOptions),
   component: DashboardPage,
 });
 
 function DashboardPage() {
-  const items = Route.useLoaderData();
+  const { data: items } = useSuspenseQuery(itemsQueryOptions);
 
   return (
     <main className="mx-auto max-w-4xl p-8">
@@ -1455,7 +1478,38 @@ swirls storage url <path> [--expires]  # Get signed URL
 
 Each micro-SaaS app should have its own Swirls project. This isolates forms, graphs, secrets, and storage.
 
-### 2. Use Forms for User Input -> AI Processing
+### 2. Use TanStack Query for Route Data
+
+Use `queryOptions`, `context.queryClient.ensureQueryData` in route loaders, and `useSuspenseQuery` in page components so that:
+
+- Route transitions wait on data (loader promise), which keeps the router in a pending state and allows components like a navigation progress bar to run.
+- Data is cached in the QueryClient; refetch after mutations with `queryClient.invalidateQueries({ queryKey: [...] })`.
+
+Define shared query options, prefetch in the loader, and read in the component:
+
+```typescript
+const itemsQueryOptions = queryOptions({
+  queryKey: ["items"],
+  queryFn: () => getItems(),
+});
+
+export const Route = createFileRoute("/dashboard")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(itemsQueryOptions),
+  component: DashboardPage,
+});
+
+function DashboardPage() {
+  const { data: items } = useSuspenseQuery(itemsQueryOptions);
+  const queryClient = useQueryClient();
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["items"] });
+  // ...
+}
+```
+
+Ensure the root route uses `createRootRouteWithContext<RouterContext>()` and the router provides `context: { queryClient }` (see Step 6).
+
+### 3. Use Forms for User Input -> AI Processing
 
 The primary integration point is: **User submits form in your app -> Swirls validates & triggers workflow graph -> Graph processes with LLMs/HTTP/code -> Results stored in stream**.
 
@@ -1465,7 +1519,7 @@ User -> Your App (TanStack Start) -> Swirls Form -> Trigger -> Graph -> Stream
 User <- Your App (query stream) <-----------------------------------------
 ```
 
-### 3. Use Streams for Reading Results
+### 4. Use Streams for Reading Results
 
 After a graph execution completes, query the connected data stream to read results back into your app using the SDK client:
 
@@ -1482,24 +1536,24 @@ const results = await swirls.client.streams.executeStreamQuery({
 });
 ```
 
-### 4. Use Webhooks for External Integrations
+### 5. Use Webhooks for External Integrations
 
 If your SaaS receives data from external services (Stripe, GitHub, etc.), create a Swirls webhook and point the external service to it. The webhook triggers a graph that processes the data.
 
-### 5. Use Schedules for Recurring Tasks
+### 6. Use Schedules for Recurring Tasks
 
 Cron-based schedules trigger graphs on a recurring basis. Use for daily reports, data sync, cleanup jobs, etc.
 
-### 6. Auth Guard Everything
+### 7. Auth Guard Everything
 
 Always use `authedFn()` from `@/lib/auth-guard` instead of bare `createServerFn()` for any server function that accesses user data. This enforces auth via middleware — you cannot forget it because `context.userId` is the only way to get the user ID. Only use bare `createServerFn()` for truly public endpoints. Check ownership (`userId` match) before update/delete operations.
 
-### 7. Keep Domain Logic in the App, AI Logic in Swirls
+### 8. Keep Domain Logic in the App, AI Logic in Swirls
 
 - **In your app (TanStack Start)**: User management, CRUD operations, UI rendering, session management
 - **In Swirls (graphs)**: LLM calls, HTTP enrichment, data transforms, email notifications, AI decision-making
 
-### 8. Generate Types After Every Swirls Change
+### 9. Generate Types After Every Swirls Change
 
 Whenever you modify forms in the Swirls dashboard, regenerate types:
 
@@ -1509,13 +1563,13 @@ bun run swirls:gen
 
 This keeps your TypeScript types in sync with your Swirls project.
 
-### 9. Environment Variable Security
+### 10. Environment Variable Security
 
 - `BETTER_AUTH_SECRET` - Generate with `openssl rand -base64 32`
 - `SWIRLS_API_KEY` - Create in Swirls dashboard (format: `ak_*`)
 - Never commit `.env` files
 
-### 10. Local Development Workflow
+### 11. Local Development Workflow
 
 ```bash
 # 1. Start the app

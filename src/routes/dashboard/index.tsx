@@ -1,3 +1,4 @@
+import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Eye, EyeOff, FileText, Inbox, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -11,22 +12,29 @@ import {
 	togglePublish,
 } from "@/server/forms";
 
+const formsQueryOptions = queryOptions({
+	queryKey: ["forms"],
+	queryFn: () => getForms(),
+});
+
 export const Route = createFileRoute("/dashboard/")({
-	loader: () => getForms(),
+	loader: ({ context }) =>
+		context.queryClient.ensureQueryData(formsQueryOptions),
 	component: DashboardPage,
 });
 
 function DashboardPage() {
-	const initialForms = Route.useLoaderData();
-	const [forms, setForms] = useState(initialForms);
+	const { data: forms } = useSuspenseQuery(formsQueryOptions);
+	const queryClient = useQueryClient();
 	const [showCreateForm, setShowCreateForm] = useState(false);
 
-	const refreshForms = async () => {
-		const data = await getForms();
-		setForms(data);
-	};
+	const refreshForms = () =>
+		queryClient.invalidateQueries({ queryKey: ["forms"] });
 
-	const totalSubmissions = forms.reduce((sum, f) => sum + f.submissionCount, 0);
+	const totalSubmissions = forms.reduce(
+		(sum, f) => sum + (f.submissionCount ?? 0),
+		0,
+	);
 	const publishedCount = forms.filter((f) => f.published).length;
 
 	return (

@@ -1,14 +1,16 @@
 import {
-	createRootRoute,
+	createRootRouteWithContext,
 	HeadContent,
 	Outlet,
 	Scripts,
 } from "@tanstack/react-router";
+import nprogressCss from "nprogress/nprogress.css?url";
 import Header from "@/components/header";
 import { NavProgress } from "@/components/nav-progress";
+import type { RouterContext } from "@/router";
 import appCss from "../styles.css?url";
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
 	head: () => ({
 		meta: [
 			{
@@ -33,6 +35,10 @@ export const Route = createRootRoute({
 				rel: "stylesheet",
 				href: appCss,
 			},
+			{
+				rel: "stylesheet",
+				href: nprogressCss,
+			},
 		],
 	}),
 
@@ -41,7 +47,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
 	return (
-		<html lang="en">
+		<html lang="en" className="overscroll-none">
 			<head>
 				<HeadContent />
 			</head>

@@ -43,6 +43,7 @@ This skill prevents **9 documented errors** and provides comprehensive guidance 
 - [Database Integration](#database-integration)
 - [Known Issues Prevention](#known-issues-prevention)
 - [Performance Optimization](#performance-optimization)
+- [TanStack Query Integration](#tanstack-query-integration)
 
 ---
 
@@ -756,6 +757,50 @@ if (process.env.NODE_ENV === 'production') {
 - Use local tunneling without rate limits (Cloudflare Tunnel instead of ngrok)
 
 **Reference**: [GitHub Discussion #6353](https://github.com/TanStack/router/discussions/6353)
+
+---
+
+## TanStack Query Integration
+
+Use TanStack Query with route loaders so that data is prefetched in the loader and consumed in the component via `useSuspenseQuery`. This keeps the router in a **pending** state while the loader promise is unresolved, which allows navigation progress indicators (e.g. a top-of-page progress bar) to run on route transitions.
+
+### Setup
+
+1. **Router context**: Create a `QueryClient` and pass it in router context. Export a `RouterContext` type that includes `queryClient: QueryClient`.
+
+2. **Root route**: Use `createRootRouteWithContext<RouterContext>()` instead of `createRootRoute` so child route loaders receive `context.queryClient`.
+
+### Pattern
+
+- **Define query options** with `queryOptions({ queryKey, queryFn })` (shared between loader and component).
+- **Loader**: Call `context.queryClient.ensureQueryData(queryOptions)` so data is fetched and cached before the route renders; the loader returns a promise, so the router stays pending until data is ready.
+- **Component**: Use `useSuspenseQuery(queryOptions)` to read the cached data (no extra request when the loader already ran).
+- **After mutations**: Call `queryClient.invalidateQueries({ queryKey })` to refetch and update the UI.
+
+```typescript
+// router.tsx
+export type RouterContext = { queryClient: QueryClient };
+// createRouter({ context: { queryClient: new QueryClient() }, ... })
+
+// Route
+const itemsQueryOptions = queryOptions({
+  queryKey: ["items"],
+  queryFn: () => getItems(),
+});
+
+export const Route = createFileRoute("/dashboard")({
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(itemsQueryOptions),
+  component: Page,
+});
+
+function Page() {
+  const { data: items } = useSuspenseQuery(itemsQueryOptions);
+  // ...
+}
+```
+
+When the user navigates to the route, the loader runs, the router remains pending until `ensureQueryData` resolves, and any component that observes `routerState.status === "pending"` (e.g. `NavProgress`) can show a progress indicator.
 
 ---
 

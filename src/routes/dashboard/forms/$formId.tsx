@@ -1,4 +1,9 @@
 import {
+	queryOptions,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
+import {
 	createFileRoute,
 	Link,
 	redirect,
@@ -44,15 +49,29 @@ import {
 	updateFormField,
 } from "@/server/forms";
 
+const formQueryOptions = (formId: number) =>
+	queryOptions({
+		queryKey: ["form", formId],
+		queryFn: () => getForm({ data: { formId } }),
+	});
+
+const formSubmissionsQueryOptions = (formId: number) =>
+	queryOptions({
+		queryKey: ["formSubmissions", formId],
+		queryFn: () => getFormSubmissions({ data: { formId } }),
+	});
+
 export const Route = createFileRoute("/dashboard/forms/$formId")({
-	loader: async ({ params }) => {
+	loader: async ({ params, context }) => {
 		const formId = Number(params.formId);
-		const [form, submissions] = await Promise.all([
-			getForm({ data: { formId } }),
-			getFormSubmissions({ data: { formId } }),
+		const [form] = await Promise.all([
+			context.queryClient.ensureQueryData(formQueryOptions(formId)),
+			context.queryClient.ensureQueryData(formSubmissionsQueryOptions(formId)),
 		]);
-		if (!form) throw redirect({ to: "/dashboard" });
-		return { form, submissions };
+
+		if (!form) {
+			throw redirect({ to: "/dashboard" });
+		}
 	},
 	component: FormDetailPage,
 });
@@ -68,33 +87,37 @@ const FIELD_TYPES = [
 
 function FormDetailPage() {
 	const navigate = useNavigate();
-	const initialData = Route.useLoaderData();
-	const [form, setForm] = useState<FormDisplay>(
-		initialData.form as FormDisplay,
+	const queryClient = useQueryClient();
+	const { formId } = Route.useParams();
+	const formIdNum = Number(formId);
+	const { data: form } = useSuspenseQuery(formQueryOptions(formIdNum));
+	const { data: submissions } = useSuspenseQuery(
+		formSubmissionsQueryOptions(formIdNum),
 	);
-	const [submissions, setSubmissions] = useState(initialData.submissions);
 	const [tab, setTab] = useState<"fields" | "submissions">("fields");
 	const [editing, setEditing] = useState(false);
 	const [copied, setCopied] = useState(false);
+
+	if (!form) {
+		throw redirect({ to: "/dashboard" });
+	}
 
 	const shareUrl =
 		typeof window !== "undefined"
 			? `${window.location.origin}/f/${form.slug}`
 			: `/f/${form.slug}`;
 
-	const refreshForm = async () => {
-		const data = await getForm({ data: { formId: form.id } });
-		if (data) setForm(data as FormDisplay);
-	};
+	const refreshForm = () =>
+		queryClient.invalidateQueries({ queryKey: ["form", formIdNum] });
 
-	const refreshSubmissions = async () => {
-		const data = await getFormSubmissions({ data: { formId: form.id } });
-		setSubmissions(data);
-	};
+	const refreshSubmissions = () =>
+		queryClient.invalidateQueries({
+			queryKey: ["formSubmissions", formIdNum],
+		});
 
 	const handleTogglePublish = async () => {
-		const updated = await togglePublish({ data: { formId: form.id } });
-		if (updated) setForm({ ...form, published: updated.published });
+		await togglePublish({ data: { formId: form.id } });
+		refreshForm();
 	};
 
 	const handleDelete = async () => {
@@ -416,9 +439,9 @@ function FieldRow({
 					autoFocus
 				/>
 				<Select
-				value={type}
-				onValueChange={(v) => setType(v as (typeof FIELD_TYPES)[number])}
-			>
+					value={type}
+					onValueChange={(v) => setType(v as (typeof FIELD_TYPES)[number])}
+				>
 					<SelectTrigger className="w-[120px]">
 						<SelectValue />
 					</SelectTrigger>
@@ -520,8 +543,7 @@ function AddFieldForm({
 }) {
 	const requiredId = useId();
 	const [label, setLabel] = useState("");
-	const [type, setType] =
-		useState<(typeof FIELD_TYPES)[number]>("text");
+	const [type, setType] = useState<(typeof FIELD_TYPES)[number]>("text");
 	const [required, setRequired] = useState(false);
 	const [loading, setLoading] = useState(false);
 
