@@ -3,7 +3,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // ─── Better Auth Tables ────────────────────────────────────────────
 
-export const user = sqliteTable("user", {
+export const user = sqliteTable("users", {
 	id: text().primaryKey(),
 	name: text().notNull(),
 	email: text().notNull().unique(),
@@ -19,7 +19,7 @@ export const user = sqliteTable("user", {
 		.default(sql`(unixepoch())`),
 });
 
-export const session = sqliteTable("session", {
+export const session = sqliteTable("sessions", {
 	id: text().primaryKey(),
 	expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
 	token: text().notNull().unique(),
@@ -36,7 +36,7 @@ export const session = sqliteTable("session", {
 		.default(sql`(unixepoch())`),
 });
 
-export const account = sqliteTable("account", {
+export const account = sqliteTable("accounts", {
 	id: text().primaryKey(),
 	accountId: text("account_id").notNull(),
 	providerId: text("provider_id").notNull(),
@@ -62,7 +62,7 @@ export const account = sqliteTable("account", {
 		.default(sql`(unixepoch())`),
 });
 
-export const verification = sqliteTable("verification", {
+export const verification = sqliteTable("verifications", {
 	id: text().primaryKey(),
 	identifier: text().notNull(),
 	value: text().notNull(),
