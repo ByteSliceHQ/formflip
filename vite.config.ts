@@ -16,7 +16,9 @@ const config = defineConfig({
 		},
 	},
 	plugins: [
-		devtools(),
+		devtools({
+			injectSource: { enabled: false },
+		}),
 		nitro({ preset: "bun" }),
 		viteTsConfigPaths({
 			projects: ["./tsconfig.json"],
