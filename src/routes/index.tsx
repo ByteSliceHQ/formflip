@@ -12,6 +12,7 @@ import { motion } from "motion/react";
 import { SignedIn, SignedOut, SignInButton } from "@/components/auth";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: LandingPage });
 
@@ -126,13 +127,16 @@ function LandingPage() {
 						without the complexity.
 					</p>
 				</motion.div>
-				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+				<div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8">
 					{features.map((feature, i) => {
 						const Icon = feature.icon;
 						return (
 							<motion.div
 								key={feature.title}
-								className="hover-lift rounded-xl border border-border bg-card p-6 shadow-warm"
+								className={cn(
+									"card-digital hover-lift border border-border p-6 shadow-warm",
+									i >= 3 && "md:translate-x-8",
+								)}
 								initial={{ opacity: 0, y: 20 }}
 								whileInView={{ opacity: 1, y: 0 }}
 								viewport={{ once: true, margin: "-40px" }}
@@ -156,7 +160,7 @@ function LandingPage() {
 			{/* CTA */}
 			<section className="px-6 py-20">
 				<motion.div
-					className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-12 text-center shadow-warm"
+					className="card-digital mx-auto max-w-3xl border border-border p-12 text-center shadow-warm"
 					initial={{ opacity: 0, y: 16 }}
 					whileInView={{ opacity: 1, y: 0 }}
 					viewport={{ once: true }}

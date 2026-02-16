@@ -5,7 +5,6 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 import nprogressCss from "nprogress/nprogress.css?url";
-import Header from "@/components/header";
 import { NavProgress } from "@/components/nav-progress";
 import type { RouterContext } from "@/router";
 import appCss from "../styles.css?url";
