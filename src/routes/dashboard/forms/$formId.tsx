@@ -24,6 +24,7 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
+import { FormPreview } from "@/components/form-preview";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -95,7 +96,9 @@ function FormDetailPage() {
 	const { data: submissions } = useSuspenseQuery(
 		formSubmissionsQueryOptions(formIdNum),
 	);
-	const [tab, setTab] = useState<"fields" | "submissions">("fields");
+	const [tab, setTab] = useState<"fields" | "submissions" | "preview">(
+		"fields",
+	);
 	const [editing, setEditing] = useState(false);
 	const [copied, setCopied] = useState(false);
 
@@ -268,17 +271,30 @@ function FormDetailPage() {
 					>
 						Submissions ({submissions.length})
 					</Button>
+					<Button
+						type="button"
+						variant={tab === "preview" ? "secondary" : "ghost"}
+						size="sm"
+						onClick={() => setTab("preview")}
+						className="flex-1"
+					>
+						Preview
+					</Button>
 				</div>
 
 				{/* Tab content */}
 				{tab === "fields" ? (
 					<FieldsTab form={form} onFieldsChanged={refreshForm} />
-				) : (
+				) : tab === "submissions" ? (
 					<SubmissionsTab
 						form={form}
 						submissions={submissions}
 						onDeleted={refreshSubmissions}
 					/>
+				) : (
+					<div className="rounded-xl border border-border bg-card p-6 shadow-warm">
+						<FormPreview form={form} />
+					</div>
 				)}
 			</div>
 		</div>
