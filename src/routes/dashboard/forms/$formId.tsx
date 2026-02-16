@@ -23,7 +23,7 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -103,10 +103,11 @@ function FormDetailPage() {
 		throw redirect({ to: "/dashboard" });
 	}
 
-	const shareUrl =
-		typeof window !== "undefined"
-			? `${window.location.origin}/f/${form.slug}`
-			: `/f/${form.slug}`;
+	const [shareUrl, setShareUrl] = useState(`/f/${form.slug}`);
+
+	useEffect(() => {
+		setShareUrl(`${window.location.origin}/f/${form.slug}`);
+	}, [form.slug]);
 
 	const refreshForm = () =>
 		queryClient.invalidateQueries({ queryKey: ["form", formIdNum] });
