@@ -83,6 +83,8 @@ export const formMappings = sqliteTable("form_mappings", {
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
 	swirlsFormId: text("swirls_form_id").notNull().unique(),
+	swirlsGraphId: text("swirls_graph_id"),
+	workflowGraphSnapshot: text("workflow_graph_snapshot"),
 	slug: text().notNull().unique(),
 	createdAt: integer("created_at", { mode: "timestamp_ms" })
 		.notNull()

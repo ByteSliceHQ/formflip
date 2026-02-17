@@ -15,48 +15,19 @@ CREATE TABLE `accounts` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `form_fields` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`form_id` integer NOT NULL,
-	`label` text NOT NULL,
-	`type` text DEFAULT 'text' NOT NULL,
-	`placeholder` text,
-	`options` text,
-	`required` integer DEFAULT false NOT NULL,
-	`order` integer DEFAULT 0 NOT NULL,
-	`created_at` integer DEFAULT (strftime('%s', 'now') * 1000) NOT NULL,
-	`updated_at` integer DEFAULT (strftime('%s', 'now') * 1000) NOT NULL,
-	FOREIGN KEY (`form_id`) REFERENCES `forms`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `form_submission_values` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`submission_id` integer NOT NULL,
-	`field_id` integer NOT NULL,
-	`value` text DEFAULT '' NOT NULL,
-	FOREIGN KEY (`submission_id`) REFERENCES `form_submissions`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`field_id`) REFERENCES `form_fields`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `form_submissions` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`form_id` integer NOT NULL,
-	`submitted_at` integer DEFAULT (strftime('%s', 'now') * 1000) NOT NULL,
-	FOREIGN KEY (`form_id`) REFERENCES `forms`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `forms` (
+CREATE TABLE `form_mappings` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`user_id` text NOT NULL,
-	`name` text NOT NULL,
-	`description` text,
+	`swirls_form_id` text NOT NULL,
+	`swirls_graph_id` text,
+	`workflow_graph_snapshot` text,
 	`slug` text NOT NULL,
-	`published` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (strftime('%s', 'now') * 1000) NOT NULL,
-	`updated_at` integer DEFAULT (strftime('%s', 'now') * 1000) NOT NULL
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `forms_slug_unique` ON `forms` (`slug`);--> statement-breakpoint
+CREATE UNIQUE INDEX `form_mappings_swirls_form_id_unique` ON `form_mappings` (`swirls_form_id`);--> statement-breakpoint
+CREATE UNIQUE INDEX `form_mappings_slug_unique` ON `form_mappings` (`slug`);--> statement-breakpoint
 CREATE TABLE `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`expires_at` integer NOT NULL,

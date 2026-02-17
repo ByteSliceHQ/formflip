@@ -1,4 +1,8 @@
-import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import {
+	queryOptions,
+	useQueryClient,
+	useSuspenseQuery,
+} from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Eye, EyeOff, FileText, Inbox, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";

@@ -1,5 +1,6 @@
 import {
 	queryOptions,
+	useQuery,
 	useQueryClient,
 	useSuspenseQuery,
 } from "@tanstack/react-query";
@@ -18,6 +19,8 @@ import {
 	Eye,
 	EyeOff,
 	GripVertical,
+	Mail,
+	MessageCircle,
 	Pencil,
 	Plus,
 	Trash2,
@@ -37,6 +40,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import {
+	addPresetNode,
 	createFormField,
 	deleteForm,
 	deleteFormField,
@@ -45,6 +49,7 @@ import {
 	type FormFieldDisplay,
 	type FormSubmissionDisplay,
 	getForm,
+	getFormGraph,
 	getFormSubmissions,
 	togglePublish,
 	updateForm,
@@ -61,6 +66,12 @@ const formSubmissionsQueryOptions = (formId: number) =>
 	queryOptions({
 		queryKey: ["formSubmissions", formId],
 		queryFn: () => getFormSubmissions({ data: { formId } }),
+	});
+
+const formGraphQueryOptions = (formId: number) =>
+	queryOptions({
+		queryKey: ["formGraph", formId],
+		queryFn: () => getFormGraph({ data: { formId } }),
 	});
 
 export const Route = createFileRoute("/dashboard/forms/$formId")({
@@ -96,9 +107,9 @@ function FormDetailPage() {
 	const { data: submissions } = useSuspenseQuery(
 		formSubmissionsQueryOptions(formIdNum),
 	);
-	const [tab, setTab] = useState<"fields" | "submissions" | "preview">(
-		"fields",
-	);
+	const [tab, setTab] = useState<
+		"fields" | "submissions" | "preview" | "automations"
+	>("fields");
 	const [editing, setEditing] = useState(false);
 	const [copied, setCopied] = useState(false);
 
@@ -280,6 +291,15 @@ function FormDetailPage() {
 					>
 						Preview
 					</Button>
+					<Button
+						type="button"
+						variant={tab === "automations" ? "secondary" : "ghost"}
+						size="sm"
+						onClick={() => setTab("automations")}
+						className="flex-1"
+					>
+						Automations
+					</Button>
 				</div>
 
 				{/* Tab content */}
@@ -291,6 +311,8 @@ function FormDetailPage() {
 						submissions={submissions}
 						onDeleted={refreshSubmissions}
 					/>
+				) : tab === "automations" ? (
+					<AutomationsTab formId={form.id} onChanged={refreshForm} />
 				) : (
 					<div className="rounded-xl border border-border bg-card p-6 shadow-warm">
 						<FormPreview form={form} />
@@ -351,6 +373,306 @@ function EditFormInline({
 				</Button>
 				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
 					Cancel
+				</Button>
+			</div>
+		</form>
+	);
+}
+
+// ─── Automations Tab ───────────────────────────────────────────────
+
+function AutomationsTab({
+	formId,
+	onChanged,
+}: {
+	formId: number;
+	onChanged: () => void;
+}) {
+	const queryClient = useQueryClient();
+	const { data: graph, isLoading } = useQuery(formGraphQueryOptions(formId));
+	const [addPreset, setAddPreset] = useState<"slack" | "email" | null>(null);
+
+	const refreshGraph = () =>
+		queryClient.invalidateQueries({ queryKey: ["formGraph", formId] });
+
+	if (isLoading) {
+		return (
+			<div className="rounded-xl border border-border bg-card p-6 shadow-warm">
+				<p className="text-muted-foreground">Loading automations…</p>
+			</div>
+		);
+	}
+
+	if (graph === null || graph === undefined) {
+		return (
+			<div className="rounded-xl border border-border bg-card p-6 shadow-warm">
+				<p className="text-muted-foreground">
+					This form has no workflow graph. Only newly created forms have
+					automations; you can add a new form to use this feature.
+				</p>
+			</div>
+		);
+	}
+
+	const nodes = graph.nodes ?? [];
+
+	return (
+		<div className="space-y-3">
+			<div className="flex items-center justify-between">
+				<h2 className="font-display text-lg font-semibold italic text-foreground">
+					Automations
+				</h2>
+				{addPreset === null ? (
+					<div className="flex gap-2">
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={() => setAddPreset("slack")}
+							className="gap-2"
+						>
+							<MessageCircle size={16} />
+							Slack notification
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onClick={() => setAddPreset("email")}
+							className="gap-2"
+						>
+							<Mail size={16} />
+							Email notification
+						</Button>
+					</div>
+				) : null}
+			</div>
+
+			{nodes.length === 0 && addPreset === null && (
+				<div className="rounded-xl border border-dashed border-border py-12 text-center">
+					<p className="text-muted-foreground">No automations yet.</p>
+					<p className="mt-1 text-sm text-muted-foreground">
+						Add a Slack or Email notification to run when someone submits this
+						form.
+					</p>
+				</div>
+			)}
+
+			<div className="space-y-2">
+				{nodes.map((node) => (
+					<div
+						key={node.id}
+						className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-warm"
+					>
+						{node.type === "http" ? (
+							<MessageCircle size={18} className="text-muted-foreground" />
+						) : node.type === "email" ? (
+							<Mail size={18} className="text-muted-foreground" />
+						) : null}
+						<span className="font-medium text-foreground">{node.label}</span>
+						<span className="text-sm text-muted-foreground">({node.type})</span>
+					</div>
+				))}
+			</div>
+
+			{addPreset === "slack" && (
+				<AddSlackPresetForm
+					formId={formId}
+					onAdded={() => {
+						setAddPreset(null);
+						refreshGraph();
+						onChanged();
+					}}
+					onCancel={() => setAddPreset(null)}
+				/>
+			)}
+			{addPreset === "email" && (
+				<AddEmailPresetForm
+					formId={formId}
+					onAdded={() => {
+						setAddPreset(null);
+						refreshGraph();
+						onChanged();
+					}}
+					onCancel={() => setAddPreset(null)}
+				/>
+			)}
+		</div>
+	);
+}
+
+function AddSlackPresetForm({
+	formId,
+	onAdded,
+	onCancel,
+}: {
+	formId: number;
+	onAdded: () => void;
+	onCancel: () => void;
+}) {
+	const id = useId();
+	const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
+	const [body, setBody] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError(null);
+		if (!slackWebhookUrl.trim()) return;
+		setLoading(true);
+		try {
+			await addPresetNode({
+				data: {
+					formId,
+					preset: "slack",
+					config: {
+						slackWebhookUrl: slackWebhookUrl.trim(),
+						...(body.trim() ? { body: body.trim() } : {}),
+					},
+				},
+			});
+			onAdded();
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Failed to add Slack automation",
+			);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<form
+			onSubmit={handleSubmit}
+			className="rounded-xl border border-primary/30 bg-card p-5 shadow-warm"
+		>
+			<h3 className="mb-4 text-lg font-semibold text-foreground">
+				Add Slack notification
+			</h3>
+			<div className="space-y-3">
+				<Label htmlFor={`${id}-slack-webhook-url`}>Slack webhook URL</Label>
+				<Input
+					id={`${id}-slack-webhook-url`}
+					type="url"
+					placeholder="https://hooks.slack.com/services/..."
+					value={slackWebhookUrl}
+					onChange={(e) => setSlackWebhookUrl(e.target.value)}
+				/>
+				<Label htmlFor={`${id}-slack-body`}>Message body (optional)</Label>
+				<Input
+					id={`${id}-slack-body`}
+					type="text"
+					placeholder='e.g. {"text": "New form submission"}'
+					value={body}
+					onChange={(e) => setBody(e.target.value)}
+				/>
+				{error && <p className="text-sm text-destructive">{error}</p>}
+			</div>
+			<div className="mt-4 flex justify-end gap-2">
+				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
+					Cancel
+				</Button>
+				<Button
+					type="submit"
+					size="sm"
+					disabled={loading || !slackWebhookUrl.trim()}
+				>
+					{loading ? "Adding…" : "Add"}
+				</Button>
+			</div>
+		</form>
+	);
+}
+
+function AddEmailPresetForm({
+	formId,
+	onAdded,
+	onCancel,
+}: {
+	formId: number;
+	onAdded: () => void;
+	onCancel: () => void;
+}) {
+	const id = useId();
+	const [to, setTo] = useState("");
+	const [subject, setSubject] = useState("");
+	const [body, setBody] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError(null);
+		if (!to.trim() || !subject.trim()) return;
+		setLoading(true);
+		try {
+			await addPresetNode({
+				data: {
+					formId,
+					preset: "email",
+					config: {
+						to: to.trim(),
+						subject: subject.trim(),
+						...(body.trim() ? { body: body.trim() } : {}),
+					},
+				},
+			});
+			onAdded();
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Failed to add Email automation",
+			);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<form
+			onSubmit={handleSubmit}
+			className="rounded-xl border border-primary/30 bg-card p-5 shadow-warm"
+		>
+			<h3 className="mb-4 text-lg font-semibold text-foreground">
+				Add Email notification
+			</h3>
+			<div className="space-y-3">
+				<Label htmlFor={`${id}-email-to`}>To</Label>
+				<Input
+					id={`${id}-email-to`}
+					type="email"
+					placeholder="recipient@example.com"
+					value={to}
+					onChange={(e) => setTo(e.target.value)}
+				/>
+				<Label htmlFor={`${id}-email-subject`}>Subject</Label>
+				<Input
+					id={`${id}-email-subject`}
+					type="text"
+					placeholder="New form submission"
+					value={subject}
+					onChange={(e) => setSubject(e.target.value)}
+				/>
+				<Label htmlFor={`${id}-email-body`}>Body (optional)</Label>
+				<Input
+					id={`${id}-email-body`}
+					type="text"
+					placeholder="You can use {{fieldName}} for submission data if supported"
+					value={body}
+					onChange={(e) => setBody(e.target.value)}
+				/>
+				{error && <p className="text-sm text-destructive">{error}</p>}
+			</div>
+			<div className="mt-4 flex justify-end gap-2">
+				<Button type="button" variant="outline" size="sm" onClick={onCancel}>
+					Cancel
+				</Button>
+				<Button
+					type="submit"
+					size="sm"
+					disabled={loading || !to.trim() || !subject.trim()}
+				>
+					{loading ? "Adding…" : "Add"}
 				</Button>
 			</div>
 		</form>

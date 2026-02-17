@@ -13,6 +13,8 @@ import {
 
 export type { FormFieldDisplay };
 
+import { GraphBuilder } from "@swirls/sdk/graph";
+import { WorkflowBuilder } from "@swirls/sdk/workflow";
 import { env } from "@/env";
 import { swirls } from "@/lib/swirls";
 
@@ -157,11 +159,42 @@ export const createForm = createServerFn({ method: "POST" })
 			enabled: false,
 		});
 
+		const formInputSchema = { type: "object" as const, properties: {} };
+
+		const graph = new GraphBuilder({ client: swirls.client })
+			.setName(`${name}_workflow`)
+			.setLabel(`${data.name} workflow`)
+			.addNode("root", {
+				type: "code",
+				label: "Form input",
+				config: { type: "code", code: "return context.inputs" },
+				position: { x: 0, y: 0 },
+				inputSchema: formInputSchema,
+			});
+
+		const workflow = new WorkflowBuilder({
+			graph,
+			client: swirls.client,
+		}).addTrigger({
+			resourceType: "form",
+			resourceId: swirlsFormId,
+			enabled: true,
+			sourceSchema: formInputSchema,
+		});
+
+		workflow.validate();
+		await workflow.save({ projectId });
+
+		const swirlsGraphId = workflow.graphId;
+		const workflowGraphSnapshot = JSON.stringify(workflow.toJSON());
+
 		const [mapping] = await db
 			.insert(formMappings)
 			.values({
 				userId: context.userId,
 				swirlsFormId,
+				swirlsGraphId,
+				workflowGraphSnapshot,
 				slug,
 			})
 			.returning();
@@ -239,8 +272,235 @@ export const deleteForm = createServerFn({ method: "POST" })
 
 		if (!mapping) return { success: false };
 
+		if (mapping.swirlsGraphId) {
+			const projectId = env.SWIRLS_PROJECT_ID;
+			const { results: triggers } = await swirls.client.triggers.listTriggers({
+				projectId,
+				graphId: mapping.swirlsGraphId,
+			});
+
+			for (const trigger of triggers ?? []) {
+				await swirls.client.triggers.deleteTrigger({ id: trigger.id });
+			}
+
+			await swirls.client.graphs.deleteGraph({
+				id: mapping.swirlsGraphId,
+			});
+		}
+
 		await swirls.client.forms.deleteForm({ id: mapping.swirlsFormId });
 		await db.delete(formMappings).where(eq(formMappings.id, data.formId));
+
+		return { success: true };
+	});
+
+// ─── Automations (graph + preset nodes) ─────────────────────────────
+
+/** Serialized WorkflowBuilder.toJSON() — we only store this shape. */
+type WorkflowGraphSnapshot = {
+	graph: {
+		id: string;
+		nodes: ParsedGraphNode[];
+		edges: ParsedGraphEdge[];
+	};
+	triggers?: unknown[];
+};
+type ParsedGraphNode = { id: string; label: string; type: string };
+type ParsedGraphEdge = {
+	id: string;
+	sourceNodeId: string;
+	targetNodeId: string;
+};
+
+export const getFormGraph = createServerFn({ method: "GET" })
+	.inputValidator(z.object({ formId: z.number() }))
+	.middleware([authMiddleware])
+	.handler(async ({ context, data }) => {
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping?.workflowGraphSnapshot) return null;
+
+		const parsed = JSON.parse(
+			mapping.workflowGraphSnapshot,
+		) as WorkflowGraphSnapshot;
+		const graphPart = parsed.graph;
+		const nodes = (graphPart.nodes ?? []).map((n) => ({
+			id: n.id,
+			label: n.label,
+			type: n.type,
+		}));
+
+		return {
+			id: graphPart.id,
+			nodes,
+			edges: graphPart.edges ?? [],
+		};
+	});
+
+const slackPresetConfigSchema = z.object({
+	slackWebhookUrl: z.string().url(),
+	body: z.string().optional(),
+});
+
+const emailPresetConfigSchema = z.object({
+	to: z.string().email(),
+	subject: z.string().min(1),
+	body: z.string().optional(),
+});
+
+/** Sync the workflow graph root inputSchema and form trigger sourceSchema to the form's current schema. */
+async function syncFormSchemaToWorkflowRoot(
+	mapping: { id: number; swirlsFormId: string; swirlsGraphId: string | null },
+	formSchema: Record<string, unknown>,
+): Promise<void> {
+	if (!mapping.swirlsGraphId) return;
+
+	const workflow = await WorkflowBuilder.fromAPI(
+		swirls.client,
+		mapping.swirlsGraphId,
+	);
+
+	const root = workflow.graph.rootNode;
+	if (root) {
+		root.update({ inputSchema: formSchema });
+	}
+
+	const formTrigger = workflow.triggerList.find(
+		(t) => t.resourceType === "form" && t.resourceId === mapping.swirlsFormId,
+	);
+
+	if (formTrigger) {
+		workflow.removeTrigger("form", mapping.swirlsFormId);
+
+		workflow.addTrigger({
+			resourceType: "form",
+			resourceId: mapping.swirlsFormId,
+			enabled: formTrigger.enabled ?? true,
+			sourceSchema: formSchema,
+		});
+	}
+
+	workflow.validate();
+	await workflow.save({ projectId: env.SWIRLS_PROJECT_ID });
+
+	await db
+		.update(formMappings)
+		.set({ workflowGraphSnapshot: JSON.stringify(workflow.toJSON()) })
+		.where(eq(formMappings.id, mapping.id));
+}
+
+function uniquePresetNodeName(
+	graph: ReturnType<typeof GraphBuilder.fromJSON>,
+	base: string,
+): string {
+	let name = base;
+	let n = 1;
+
+	while (graph.getNode(name)) {
+		name = `${base}_${n}`;
+		n += 1;
+	}
+
+	return name;
+}
+
+export const addPresetNode = createServerFn({ method: "POST" })
+	.inputValidator(
+		z.object({
+			formId: z.number(),
+			preset: z.enum(["slack", "email"]),
+			config: z.union([slackPresetConfigSchema, emailPresetConfigSchema]),
+		}),
+	)
+	.middleware([authMiddleware])
+	.handler(async ({ context, data }) => {
+		const [mapping] = await db
+			.select()
+			.from(formMappings)
+			.where(
+				and(
+					eq(formMappings.id, data.formId),
+					eq(formMappings.userId, context.userId),
+				),
+			)
+			.limit(1);
+
+		if (!mapping) {
+			throw new Error("Form not found");
+		}
+
+		if (!mapping.workflowGraphSnapshot) {
+			throw new Error("Form has no workflow graph");
+		}
+
+		if (!mapping.swirlsGraphId) {
+			throw new Error("Form has no Swirls graph id for sync");
+		}
+
+		const workflow = await WorkflowBuilder.fromAPI(
+			swirls.client,
+			mapping.swirlsGraphId,
+		);
+
+		const nodeCount = workflow.graph.nodeList.length;
+		const position = { x: 200 * nodeCount, y: 0 };
+
+		if (data.preset === "slack") {
+			const config = slackPresetConfigSchema.parse(data.config);
+			const nodeName = uniquePresetNodeName(workflow.graph, "slack_notify");
+
+			workflow.graph.addNode(nodeName, {
+				type: "http",
+				label: "Slack notification",
+				config: {
+					type: "http",
+					url: config.slackWebhookUrl,
+					method: "POST",
+					body: config.body ?? JSON.stringify({ text: "New form submission" }),
+				},
+				position,
+			});
+
+			workflow.graph.addEdge({ source: "root", target: nodeName });
+		} else {
+			const config = emailPresetConfigSchema.parse(data.config);
+			const nodeName = uniquePresetNodeName(workflow.graph, "email_notify");
+
+			workflow.graph.addNode(nodeName, {
+				type: "email",
+				label: "Email notification",
+				config: {
+					type: "email",
+					to: config.to,
+					subject: config.subject,
+					text: config.body ?? "",
+				},
+				position,
+			});
+
+			workflow.graph.addEdge({ source: "root", target: nodeName });
+		}
+
+		workflow.validate();
+		await workflow.save({ projectId: env.SWIRLS_PROJECT_ID });
+
+		const newSnapshot = JSON.stringify(workflow.toJSON());
+
+		await db
+			.update(formMappings)
+			.set({
+				workflowGraphSnapshot: newSnapshot,
+			})
+			.where(eq(formMappings.id, data.formId));
 
 		return { success: true };
 	});
@@ -262,7 +522,9 @@ export const togglePublish = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 
-		if (!mapping) return null;
+		if (!mapping) {
+			return null;
+		}
 
 		const swirlsForm = await swirls.client.forms.getForm({
 			id: mapping.swirlsFormId,
@@ -318,7 +580,9 @@ export const createFormField = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 
-		if (!mapping) return null;
+		if (!mapping) {
+			return null;
+		}
 
 		const swirlsForm = await swirls.client.forms.getForm({
 			id: mapping.swirlsFormId,
@@ -346,8 +610,12 @@ export const createFormField = createServerFn({ method: "POST" })
 
 		await swirls.client.forms.updateForm({
 			id: mapping.swirlsFormId,
-			schema,
+			schema: schema as Parameters<
+				(typeof swirls.client.forms)["updateForm"]
+			>[0]["schema"],
 		});
+
+		await syncFormSchemaToWorkflowRoot(mapping, schema);
 
 		const fields = jsonSchemaToFormFields(schema);
 		const added = fields[fields.length - 1];
@@ -380,14 +648,20 @@ export const updateFormField = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 
-		if (!mapping) return null;
+		if (!mapping) {
+			return null;
+		}
 
 		const swirlsForm = await swirls.client.forms.getForm({
 			id: mapping.swirlsFormId,
 		});
+
 		let fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
 		const idx = fields.findIndex((f) => f.key === data.fieldKey);
-		if (idx < 0) return null;
+
+		if (idx < 0) {
+			return null;
+		}
 
 		fields = fields.map((f, i) => ({
 			...f,
@@ -412,8 +686,12 @@ export const updateFormField = createServerFn({ method: "POST" })
 
 		await swirls.client.forms.updateForm({
 			id: mapping.swirlsFormId,
-			schema,
+			schema: schema as Parameters<
+				(typeof swirls.client.forms)["updateForm"]
+			>[0]["schema"],
 		});
+
+		await syncFormSchemaToWorkflowRoot(mapping, schema);
 
 		return fields[idx];
 	});
@@ -433,11 +711,14 @@ export const deleteFormField = createServerFn({ method: "POST" })
 			)
 			.limit(1);
 
-		if (!mapping) return { success: false };
+		if (!mapping) {
+			return { success: false };
+		}
 
 		const swirlsForm = await swirls.client.forms.getForm({
 			id: mapping.swirlsFormId,
 		});
+
 		const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {}).filter(
 			(f) => f.key !== data.fieldKey,
 		);
@@ -455,8 +736,12 @@ export const deleteFormField = createServerFn({ method: "POST" })
 
 		await swirls.client.forms.updateForm({
 			id: mapping.swirlsFormId,
-			schema,
+			schema: schema as Parameters<
+				(typeof swirls.client.forms)["updateForm"]
+			>[0]["schema"],
 		});
+
+		await syncFormSchemaToWorkflowRoot(mapping, schema);
 
 		return { success: true };
 	});
@@ -478,7 +763,10 @@ export const getPublicForm = createServerFn({ method: "GET" })
 			const swirlsForm = await swirls.client.forms.getForm({
 				id: mapping.swirlsFormId,
 			});
-			if (!swirlsForm.enabled) return null;
+
+			if (!swirlsForm.enabled) {
+				return null;
+			}
 
 			const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
 
@@ -518,6 +806,7 @@ export const submitForm = createServerFn({ method: "POST" })
 			const swirlsForm = await swirls.client.forms.getForm({
 				id: mapping.swirlsFormId,
 			});
+
 			if (!swirlsForm.enabled) {
 				return { success: false, error: "Form is not accepting submissions" };
 			}
@@ -528,6 +817,7 @@ export const submitForm = createServerFn({ method: "POST" })
 			for (const field of fields) {
 				if (field.required) {
 					const val = data.values[field.key];
+
 					if (val === undefined || val === null || String(val).trim() === "") {
 						return {
 							success: false,
@@ -539,9 +829,14 @@ export const submitForm = createServerFn({ method: "POST" })
 
 			// Map values: checkbox uses "true"/"false", convert to boolean for Swirls
 			const submitData: Record<string, string | number | boolean> = {};
+
 			for (const field of fields) {
 				const raw = data.values[field.key];
-				if (raw === undefined || raw === null) continue;
+
+				if (raw === undefined || raw === null) {
+					continue;
+				}
+
 				if (field.type === "checkbox") {
 					submitData[field.key] = raw === "true" || raw === "1";
 				} else if (field.type === "number") {
@@ -588,6 +883,7 @@ export const getFormSubmissions = createServerFn({ method: "GET" })
 			const swirlsForm = await swirls.client.forms.getForm({
 				id: mapping.swirlsFormId,
 			});
+
 			const fields = jsonSchemaToFormFields(swirlsForm.schema ?? {});
 			const fieldMap = new Map(fields.map((f) => [f.key, f]));
 
@@ -595,14 +891,20 @@ export const getFormSubmissions = createServerFn({ method: "GET" })
 				formId: mapping.swirlsFormId,
 			});
 
-			if (!Array.isArray(results)) return [];
+			if (!Array.isArray(results)) {
+				return [];
+			}
 
 			return results.map((sub: Record<string, unknown>) => {
 				const values: Array<{ field: FormFieldDisplay; value: string }> = [];
+
 				for (const [key, val] of Object.entries(sub)) {
-					if (key === "id" || key === "submittedAt" || key === "createdAt")
+					if (key === "id" || key === "submittedAt" || key === "createdAt") {
 						continue;
+					}
+
 					const field = fieldMap.get(key);
+
 					if (field) {
 						values.push({
 							field,
@@ -610,6 +912,7 @@ export const getFormSubmissions = createServerFn({ method: "GET" })
 						});
 					}
 				}
+
 				return {
 					id: String(sub.id ?? crypto.randomUUID()),
 					submittedAt: sub.submittedAt

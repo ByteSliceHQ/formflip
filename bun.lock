@@ -5,7 +5,7 @@
     "": {
       "name": "formflip",
       "dependencies": {
-        "@swirls/sdk": "^0.0.11",
+        "@swirls/sdk": "^0.0.13",
         "@tailwindcss/vite": "^4.0.6",
         "@tanstack/react-devtools": "^0.7.0",
         "@tanstack/react-query": "^5.90.21",
@@ -558,7 +558,7 @@
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
-    "@swirls/sdk": ["@swirls/sdk@0.0.11", "", { "dependencies": { "@orpc/client": "1.12.2", "@orpc/contract": "1.12.2", "@orpc/tanstack-query": "1.12.2", "@types/json-schema": "7.0.15", "zod": "4.3.5" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["react"] }, "sha512-oa/h9s3dAMvn0epapboj5lqdrH5lhjDKDHhJ869VXTmRoplbuCiWWJViVLzRL5Oymhemtie5/u046ENz4tXpnw=="],
+    "@swirls/sdk": ["@swirls/sdk@0.0.13", "", { "dependencies": { "@orpc/client": "1.12.2", "@orpc/contract": "1.12.2", "@orpc/tanstack-query": "1.12.2", "@types/json-schema": "7.0.15", "zod": "4.3.5" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["react"] }, "sha512-xmG9RSqJylidHyhheezUHA6Dl2lrs08ILNT0FqvDPMaTf/jiVthxERILL8mdx049T5CoIMZKs+e0POKVphd1lg=="],
 
     "@tailwindcss/node": ["@tailwindcss/node@4.1.18", "", { "dependencies": { "@jridgewell/remapping": "^2.3.4", "enhanced-resolve": "^5.18.3", "jiti": "^2.6.1", "lightningcss": "1.30.2", "magic-string": "^0.30.21", "source-map-js": "^1.2.1", "tailwindcss": "4.1.18" } }, "sha512-DoR7U1P7iYhw16qJ49fgXUlry1t4CpXeErJHnQ44JgTSKMaZUdf17cfn5mHchfJ4KRBZRFA/Coo+MUF5+gOaCQ=="],
 
